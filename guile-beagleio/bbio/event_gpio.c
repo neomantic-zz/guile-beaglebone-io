@@ -602,9 +602,7 @@ int blocking_wait_for_edge(unsigned int gpio, unsigned int edge)
     if (gpio_event_add(gpio) != 0)
         return 2;
 
-    // export /sys/class/gpio interface
-    gpio_export(gpio);
-    gpio_set_direction(gpio, 0); // 0=input
+    gpio_set_direction(gpio, INPUT);
     gpio_set_edge(gpio, edge);
 
     if (!fd)
