@@ -542,11 +542,8 @@ int add_edge_detect(unsigned int gpio, unsigned int edge)
     // start poll thread if it is not already running
     if (!thread_running)
     {
-      /* FIXME:  */
-      /*
         if (pthread_create(&threads, NULL, poll_thread, (void *)t) != 0)
-      */
-            return 2;
+	  return 2;
     }
 
     return 0;
