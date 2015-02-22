@@ -210,11 +210,6 @@
     (gpio-cleanup-all)
     (not (member #t (map sysfs-exists? pins))))))
 
-(test-group
- "possible-gpio-levels"
- (test-assert (number? HIGH))
- (test-assert (number? LOW))
- (test-assert (not (eq? HIGH LOW))))
 
 (test-group
  "setting the value of a gpio"
@@ -255,7 +250,7 @@
 
 (test-group-with-cleanup
  "returns the correct value for a gpio"
- (test-equal
+  (test-equal
   HIGH
   (let ((gpio (gpio-setup "P9_14")))
     (gpio-direction-set! gpio OUTPUT)
