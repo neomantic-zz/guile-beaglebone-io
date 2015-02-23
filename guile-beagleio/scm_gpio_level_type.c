@@ -1,6 +1,6 @@
 #include <libguile.h>
 #include "event_gpio.h"
-#include "guile_bbio_gpio_level.h"
+#include "scm_gpio_level_type.h"
 
 static scm_t_bits gpio_level_tag;
 

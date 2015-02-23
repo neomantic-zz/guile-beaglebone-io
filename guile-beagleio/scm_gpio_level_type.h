@@ -1,5 +1,5 @@
-#ifndef GUILE_BBIO_GPIO_LEVEL_H
-#define GUILE_BBIO_GPIO_LEVEL_H
+#ifndef SCM_GPIO_LEVEL_TYPE_H
+#define SCM_GPIO_LEVEL_TYPE_H
 #include <libguile.h>
 
 void init_gpio_level_type(void);
