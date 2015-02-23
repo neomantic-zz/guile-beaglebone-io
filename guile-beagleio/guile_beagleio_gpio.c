@@ -13,6 +13,11 @@ struct gpio {
   SCM update_func;
 };
 
+static SCM
+scm_gpio_throw(char *message) {
+  return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string(message)));
+}
+
 SCM
 lookup_gpio_number(SCM s_channel) {
   unsigned int gpio_number;
@@ -35,12 +40,12 @@ setup_channel(SCM s_channel) {
   get_gpio_number(channel, &gpio_number);
 
   if (!gpio_number) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to find pin number")));
+    return scm_gpio_throw("unable to find pin number");
   }
 
   exported = gpio_export(gpio_number);
   if (exported != 0 ) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to export to /sys/class/gpio")));
+    return scm_gpio_throw("unable to export to /sys/class/gpio");
   }
 
   gpio = (struct gpio *) scm_gc_malloc(sizeof(struct gpio), "gpio");
@@ -115,11 +120,11 @@ set_direction(SCM gpio_smob, SCM pud) {
   } else if ( pud_int == OUTPUT ){
     success = gpio_set_direction(gpio->pin_number, pud_int);
   } else {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("only accepts INPUT and OUTPUT")));
+    return scm_gpio_throw("only accepts INPUT and OUTPUT");
   }
 
   if (success == -1 ) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to write to /sys/class/gpio")));
+    return scm_gpio_throw("unable to write to /sys/class/gpio");
   }
 
   return gpio_smob;
@@ -132,7 +137,7 @@ get_direction(SCM gpio_smob) {
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if (gpio_get_direction(gpio->pin_number, &value) == -1) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to read /sys/class/gpio")));
+    return scm_gpio_throw("unable to read /sys/class/gpio");
   }
   return scm_from_int(value);
 }
@@ -157,7 +162,7 @@ set_value(SCM gpio_smob, SCM level_int) {
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if( gpio_set_value(gpio->pin_number, scm_to_int(level_int)) == -1) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to read /sys/class/gpio")));
+    return scm_gpio_throw("unable to read /sys/class/gpio");
   }
   return gpio_smob;
 }
@@ -169,7 +174,7 @@ get_value(SCM gpio_smob) {
   unsigned int value;
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if( gpio_get_value(gpio->pin_number, &value) == -1) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to read /sys/class/gpio/*/value")));
+    return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
   }
   return scm_from_int(value);
 }
