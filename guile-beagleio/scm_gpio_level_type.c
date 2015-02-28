@@ -36,7 +36,7 @@ get_sysfs_value(const void* self) {
 
 
 static int
-print_gpio_level(SCM gpio_level_smob, SCM port, scm_print_state *pstate) {
+scm_gpio_level_print(SCM gpio_level_smob, SCM port, scm_print_state *pstate) {
   struct gpio_level *gpio_level;
   scm_assert_smob_type(gpio_level_tag, gpio_level_smob);
   gpio_level = (struct gpio_level*) SCM_SMOB_DATA(gpio_level_smob);
@@ -51,7 +51,7 @@ print_gpio_level(SCM gpio_level_smob, SCM port, scm_print_state *pstate) {
 }
 
 static size_t
-free_gpio_level(SCM gpio_level_smob) {
+scm_gpio_level_free(SCM gpio_level_smob) {
   struct gpio_level *gpio_level;
   scm_assert_smob_type(gpio_level_tag, gpio_level_smob);
   gpio_level = (struct gpio_level*) SCM_SMOB_DATA(gpio_level_smob);
@@ -60,7 +60,7 @@ free_gpio_level(SCM gpio_level_smob) {
 }
 
 static SCM
-gpio_level_equalp(SCM gpio_level_smob, SCM other_gpio_level_smob) {
+scm_gpio_level_equalp(SCM gpio_level_smob, SCM other_gpio_level_smob) {
   struct gpio_level *gpio_level;
   struct gpio_level *other_gpio_level;
   scm_assert_smob_type(gpio_level_tag, gpio_level_smob);
@@ -107,9 +107,9 @@ scm_gpio_level_low_smob(void) {
 void
 init_gpio_level_type(void) {
   gpio_level_tag = scm_make_smob_type("gpio-level", sizeof(struct gpio_level));
-  scm_set_smob_print(gpio_level_tag, print_gpio_level);
-  scm_set_smob_free(gpio_level_tag, free_gpio_level);
-  scm_set_smob_equalp(gpio_level_tag, gpio_level_equalp);
+  scm_set_smob_print(gpio_level_tag, scm_gpio_level_print);
+  scm_set_smob_free(gpio_level_tag, scm_gpio_level_free);
+  scm_set_smob_equalp(gpio_level_tag, scm_gpio_level_equalp);
 }
 
 void
