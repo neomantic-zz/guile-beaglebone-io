@@ -113,7 +113,7 @@
 
 
 
-(test-error 'gpio-error (gpio-setup "non existing name"))
+;;(test-error 'gpio-error (gpio-setup "non existing name"))
 
 (define-syntax test-gpio-sysfs-export
   (syntax-rules ()
@@ -223,7 +223,7 @@
      (gpio? (gpio-value-set! gpio HIGH))))
   (gpio-cleanup-all))
  (test-group-with-cleanup
-  "setting the gpio to ouput"
+  "setting the gpio to ouput and level to LOW"
   (test-equal
    "0"
    (let ((gpio (gpio-setup "P8_3")))
@@ -235,7 +235,7 @@
 	 (read-line port)))))
   (gpio-cleanup-all))
  (test-group-with-cleanup
-  "setting the gpio to input"
+  "setting the gpio to input and level to HIGH"
   (test-equal
    "1"
    (let ((gpio (gpio-setup "P8_3")))

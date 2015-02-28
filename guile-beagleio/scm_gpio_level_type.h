@@ -3,8 +3,9 @@
 #include <libguile.h>
 
 void init_gpio_level_type(void);
-int get_level_smob_value(SCM *level_smob, int *level);
-SCM high_smob(void);
-SCM low_smob(void);
+void level_smob_to_bbio_value(SCM *level_smob, int *level);
+SCM scm_gpio_level_high_smob(void);
+SCM scm_gpio_level_low_smob(void);
+SCM scm_new_gpio_level_smob(unsigned int *pin_number);
 
 #endif

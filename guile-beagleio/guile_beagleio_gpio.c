@@ -6,7 +6,7 @@
 #include "scm_gpio_type.h"
 #include "scm_gpio_level_type.h"
 
-static SCM
+SCM
 scm_gpio_throw(char *message) {
   return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string(message)));
 }
@@ -84,9 +84,8 @@ set_value(SCM gpio_smob, SCM level_smob) {
   struct gpio *gpio;
   int level;
   scm_assert_smob_type(gpio_tag, gpio_smob);
-  get_level_smob_value(&level_smob, &level);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-
+  level_smob_to_bbio_value(&level_smob, &level);
   if( gpio_set_value(gpio->pin_number,(unsigned int) level) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio");
   }
@@ -102,11 +101,7 @@ get_value(SCM gpio_smob) {
   if( gpio_get_value(gpio->pin_number, &value) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
   }
-  if (value == HIGH) {
-    return high_smob();
-  } else {
-    return low_smob();
-  }
+  return scm_new_gpio_level_smob(&gpio->pin_number);
 }
 
 
@@ -128,7 +123,7 @@ scm_init_beagleio_gpio(void) {
   scm_c_define("OUTPUT", scm_from_int(OUTPUT));
   scm_c_define_gsubr("gpio-value-set!", 2, 0, 0, set_value);
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
-  scm_c_define("HIGH", high_smob());
-  scm_c_define("LOW", low_smob());
+  scm_c_define("HIGH", scm_gpio_level_high_smob());
+  scm_c_define("LOW", scm_gpio_level_low_smob());
   initialized = 1;
 }

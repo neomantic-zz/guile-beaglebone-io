@@ -3,6 +3,7 @@
 
 #include <libguile.h>
 
+SCM scm_gpio_throw(char *message);
 void scm_init_beagleio_gpio(void);
 
 #endif
