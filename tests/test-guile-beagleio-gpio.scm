@@ -274,4 +274,64 @@
   (let ((gpio (gpio-setup "P9_14")))
     (equal? gpio gpio))))
 
+(test-group-with-cleanup
+ "mutability of gpio level"
+ (test-assert
+  "changing the level to high on the sysfs when it was set as LOW"
+  (let ((gpio (gpio-setup "P8_3")))
+    (gpio-direction-set! gpio OUTPUT)
+    (gpio-value-set! gpio LOW)
+    (call-with-output-file
+	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
+      (lambda (port)
+	(write-line "1" port)))
+    (test-equal
+     HIGH
+     (gpio-value gpio))))
+ (test-assert
+  "changing the level to low on the sysfs when it was set as HIGH"
+  (let ((gpio (gpio-setup "P8_4")))
+    (gpio-direction-set! gpio OUTPUT)
+    (gpio-value-set! gpio HIGH)
+    (call-with-output-file
+	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_4")) "/value")
+      (lambda (port)
+	(write-line "0" port)))
+    (test-equal
+     LOW
+     (gpio-value gpio))))
+ (gpio-cleanup-all))
+
+(test-group
+ "equality of gpio levels"
+ (test-assert
+  (equal? HIGH HIGH))
+ (test-assert
+  (equal? LOW LOW))
+ (test-assert
+  (not (equal? LOW HIGH)))
+ (test-group-with-cleanup
+  "checking equality of returned levels"
+  (let ((gpio1 (gpio-setup "P8_3"))
+	(gpio2 (gpio-setup "P8_4")))
+    (gpio-direction-set! gpio1 OUTPUT)
+    (gpio-direction-set! gpio2 OUTPUT)
+    (gpio-value-set! gpio1 LOW)
+    (gpio-value-set! gpio2 LOW)
+    (test-assert
+     (equal? (gpio-value gpio1) (gpio-value gpio2))))
+  (gpio-cleanup-all)
+  (test-group-with-cleanup
+   "checking equality of returned levels when one is changed"
+   (let ((gpio1 (gpio-setup "P8_3"))
+	 (gpio2 (gpio-setup "P8_4")))
+     (gpio-direction-set! gpio1 OUTPUT)
+     (gpio-direction-set! gpio2 OUTPUT)
+     (gpio-value-set! gpio1 LOW)
+     (gpio-value-set! gpio2 LOW)
+     (gpio-value-set! gpio1 HIGH)
+     (test-assert
+      (not (equal? (gpio-value gpio1) (gpio-value gpio2)))))
+   (gpio-cleanup-all))))
+
 (test-end "gpio")
