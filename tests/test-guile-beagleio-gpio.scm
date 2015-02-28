@@ -113,7 +113,7 @@
 
 
 
-(test-error 'gpio-error (gpio-setup "non existing name"))
+;;(test-error 'gpio-error (gpio-setup "non existing name"))
 
 (define-syntax test-gpio-sysfs-export
   (syntax-rules ()
@@ -210,11 +210,6 @@
     (gpio-cleanup-all)
     (not (member #t (map sysfs-exists? pins))))))
 
-(test-group
- "possible-gpio-levels"
- (test-assert (number? HIGH))
- (test-assert (number? LOW))
- (test-assert (not (eq? HIGH LOW))))
 
 (test-group
  "setting the value of a gpio"
@@ -228,7 +223,7 @@
      (gpio? (gpio-value-set! gpio HIGH))))
   (gpio-cleanup-all))
  (test-group-with-cleanup
-  "setting the gpio to ouput"
+  "setting the gpio to ouput and level to LOW"
   (test-equal
    "0"
    (let ((gpio (gpio-setup "P8_3")))
@@ -240,7 +235,7 @@
 	 (read-line port)))))
   (gpio-cleanup-all))
  (test-group-with-cleanup
-  "setting the gpio to input"
+  "setting the gpio to input and level to HIGH"
   (test-equal
    "1"
    (let ((gpio (gpio-setup "P8_3")))
@@ -255,7 +250,7 @@
 
 (test-group-with-cleanup
  "returns the correct value for a gpio"
- (test-equal
+  (test-equal
   HIGH
   (let ((gpio (gpio-setup "P9_14")))
     (gpio-direction-set! gpio OUTPUT)
@@ -278,5 +273,65 @@
  (test-assert
   (let ((gpio (gpio-setup "P9_14")))
     (equal? gpio gpio))))
+
+(test-group-with-cleanup
+ "mutability of gpio level"
+ (test-assert
+  "changing the level to high on the sysfs when it was set as LOW"
+  (let ((gpio (gpio-setup "P8_3")))
+    (gpio-direction-set! gpio OUTPUT)
+    (gpio-value-set! gpio LOW)
+    (call-with-output-file
+	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
+      (lambda (port)
+	(write-line "1" port)))
+    (test-equal
+     HIGH
+     (gpio-value gpio))))
+ (test-assert
+  "changing the level to low on the sysfs when it was set as HIGH"
+  (let ((gpio (gpio-setup "P8_4")))
+    (gpio-direction-set! gpio OUTPUT)
+    (gpio-value-set! gpio HIGH)
+    (call-with-output-file
+	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_4")) "/value")
+      (lambda (port)
+	(write-line "0" port)))
+    (test-equal
+     LOW
+     (gpio-value gpio))))
+ (gpio-cleanup-all))
+
+(test-group
+ "equality of gpio levels"
+ (test-assert
+  (equal? HIGH HIGH))
+ (test-assert
+  (equal? LOW LOW))
+ (test-assert
+  (not (equal? LOW HIGH)))
+ (test-group-with-cleanup
+  "checking equality of returned levels"
+  (let ((gpio1 (gpio-setup "P8_3"))
+	(gpio2 (gpio-setup "P8_4")))
+    (gpio-direction-set! gpio1 OUTPUT)
+    (gpio-direction-set! gpio2 OUTPUT)
+    (gpio-value-set! gpio1 LOW)
+    (gpio-value-set! gpio2 LOW)
+    (test-assert
+     (equal? (gpio-value gpio1) (gpio-value gpio2))))
+  (gpio-cleanup-all)
+  (test-group-with-cleanup
+   "checking equality of returned levels when one is changed"
+   (let ((gpio1 (gpio-setup "P8_3"))
+	 (gpio2 (gpio-setup "P8_4")))
+     (gpio-direction-set! gpio1 OUTPUT)
+     (gpio-direction-set! gpio2 OUTPUT)
+     (gpio-value-set! gpio1 LOW)
+     (gpio-value-set! gpio2 LOW)
+     (gpio-value-set! gpio1 HIGH)
+     (test-assert
+      (not (equal? (gpio-value gpio1) (gpio-value gpio2)))))
+   (gpio-cleanup-all))))
 
 (test-end "gpio")
