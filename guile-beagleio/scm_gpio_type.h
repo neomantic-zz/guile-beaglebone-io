@@ -14,4 +14,5 @@ SCM scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel);
 SCM scm_gpio_type_p(SCM smob);
 void init_gpio_type(void);
 
+
 #endif
