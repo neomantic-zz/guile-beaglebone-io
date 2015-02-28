@@ -1,6 +1,8 @@
 #include "guile_beagleio_gpio.h"
 #include "scm_gpio_type.h"
 
+static scm_t_bits gpio_tag;
+
 static int
 scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate) {
   struct gpio *gpio;
@@ -61,6 +63,11 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel) {
   smob = scm_new_smob(gpio_tag, (scm_t_bits) gpio);
   gpio->channel = *s_channel;
   return smob;
+}
+
+void
+scm_assert_gpio_smob_type(SCM *smob) {
+  scm_assert_smob_type(gpio_tag, *smob);
 }
 
 void

@@ -41,7 +41,7 @@ setup_channel(SCM s_channel) {
 SCM
 set_direction(SCM gpio_smob, SCM pud) {
   struct gpio *gpio;
-  scm_assert_smob_type(gpio_tag, gpio_smob);
+  scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   int pud_int = scm_to_int(pud);
   int success;
@@ -64,7 +64,7 @@ SCM
 get_direction(SCM gpio_smob) {
   struct gpio *gpio;
   unsigned int value;
-  scm_assert_smob_type(gpio_tag, gpio_smob);
+  scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if (gpio_get_direction(gpio->pin_number, &value) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio");
@@ -83,7 +83,7 @@ SCM
 set_value(SCM gpio_smob, SCM level_smob) {
   struct gpio *gpio;
   int level;
-  scm_assert_smob_type(gpio_tag, gpio_smob);
+  scm_assert_gpio_smob_type(&gpio_smob);
   get_level_smob_value(&level_smob, &level);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
 
@@ -97,7 +97,7 @@ SCM
 get_value(SCM gpio_smob) {
   struct gpio *gpio;
   unsigned int value;
-  scm_assert_smob_type(gpio_tag, gpio_smob);
+  scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if( gpio_get_value(gpio->pin_number, &value) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
