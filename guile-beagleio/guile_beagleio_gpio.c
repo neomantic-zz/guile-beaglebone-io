@@ -113,24 +113,24 @@ add_event_detect(SCM gpio_smob, SCM gpio_edge) {
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   if (gpio_get_direction(gpio->pin_number, &direction) == -1) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to read /sys/class/gpio")));
+    return scm_gpio_throw("unable to read /sys/class/gpio");
   }
   // validate direction
   if (direction != INPUT) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("the gpio direction must be set to INPUT")));
+    return scm_gpio_throw("the gpio direction must be set to INPUT");
   }
   // validate edge
   edge = scm_to_int(gpio_edge);
   if( edge != RISING_EDGE && edge != FALLING_EDGE && edge != BOTH_EDGE ) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("the gpio edge must be set to RISING, FALLING, or BOTH")));
+    return scm_gpio_throw("the gpio edge must be set to RISING, FALLING, or BOTH");
   }
 
   // starts a thread
   if ((result = add_edge_detect(gpio->pin_number, (unsigned int) edge)) != 0){
     if (result == 1){
-      return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("Edge detection already enabled for this GPIO channel")));
+      return scm_gpio_throw("Edge detection already enabled for this GPIO channel");
     } else {
-      return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("Failed to add edge")));;
+      return scm_gpio_throw("Failed to add edge");
     }
   }
   return gpio_smob;
@@ -145,17 +145,17 @@ wait_for_edge(SCM gpio_smob, SCM scm_edge) {
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
 
   if (gpio_get_direction(gpio->pin_number, &direction) == -1) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("unable to read /sys/class/gpio")));
+    return scm_gpio_throw("unable to read /sys/class/gpio");
   }
   // validate direction
   if (direction != INPUT) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("the gpio direction must be set to INPUT")));
+    return scm_gpio_throw("the gpio direction must be set to INPUT");
   }
 
   // validate edge
   edge = scm_to_int(scm_edge);
   if( edge != RISING_EDGE && edge != FALLING_EDGE && edge != BOTH_EDGE ) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("the gpio edge must be set to RISING, FALLING, or BOTH")));
+    return scm_gpio_throw("the gpio edge must be set to RISING, FALLING, or BOTH");
   }
 
   result = blocking_wait_for_edge(gpio->pin_number, edge);
@@ -163,10 +163,10 @@ wait_for_edge(SCM gpio_smob, SCM scm_edge) {
   if (result == 0) {
     return get_value(gpio_smob);
   } else if (result == 2) {
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string("Edge detection events already enabled for this GPIO channel")));
+    return scm_gpio_throw("Edge detection events already enabled for this GPIO channel");
   } else {
     sprintf(error, "Error #%d waiting for edge", result);
-    return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string(error)));
+    return scm_gpio_throw(error);
   }
 }
 
