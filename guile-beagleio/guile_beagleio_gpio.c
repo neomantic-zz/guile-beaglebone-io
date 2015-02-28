@@ -84,7 +84,6 @@ set_value(SCM gpio_smob, SCM level_smob) {
   struct gpio *gpio;
   int level;
   scm_assert_gpio_smob_type(&gpio_smob);
-  get_level_smob_value(&level_smob, &level);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   level_smob_to_bbio_value(&level_smob, &level);
   if( gpio_set_value(gpio->pin_number,(unsigned int) level) == -1) {
