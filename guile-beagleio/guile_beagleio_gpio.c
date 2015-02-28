@@ -191,8 +191,8 @@ scm_init_beagleio_gpio(void) {
   scm_c_define("HIGH", scm_gpio_level_high_smob());
   scm_c_define("LOW", scm_gpio_level_low_smob());
   scm_c_define("RISING", scm_from_int(RISING_EDGE));
-  scm_c_define_gsubr("gpio-event-detection-set!", 2, 0, 0, add_event_detect);
-  scm_c_define_gsubr("gpio-event-wait", 2, 0, 0, wait_for_edge);
+  scm_c_define_gsubr("gpio-edge-detection-set!", 2, 0, 0, add_event_detect);
+  scm_c_define_gsubr("gpio-edge-wait", 2, 0, 0, wait_for_edge);
   scm_c_define("BOTH_FALLING_RISING", scm_from_int(BOTH_EDGE));
   scm_c_define("FALLING", scm_from_int(FALLING_EDGE));
   scm_c_define("NO_EDGE", scm_from_int(NO_EDGE));

@@ -330,8 +330,29 @@
      (gpio-value-set! gpio1 LOW)
      (gpio-value-set! gpio2 LOW)
      (gpio-value-set! gpio1 HIGH)
-     (test-assert
+     (test-asse
       (not (equal? (gpio-value gpio1) (gpio-value gpio2)))))
    (gpio-cleanup-all))))
+
+(test-group-with-cleanup
+ "testing edge"
+ (let((gpio-in (gpio-setup "P8_3"))
+      (gpio-out (gpio-setup "P8_4")))
+   (gpio-direction-set! gpio-in INPUT)
+   (gpio-direction-set! gpio-out OUTPUT)
+   (gpio-value-set! gpio-out HIGH)
+   (let loop ((count 20))
+     (if (<= count 0)
+	 (test-assert #t)
+	 (begin
+	   (call-with-new-thread
+	    (lambda ()
+	      (gpio-value-set! gpio-out LOW)))
+	   (usleep 30000)
+	   (gpio-edge-wait gpio-in FALLING)
+	   (gpio-value-set! gpio-out HIGH)
+	   (loop (count - 1)))))
+   (test-assert #t))
+ (gpio-cleanup-all))
 
 (test-end "gpio")

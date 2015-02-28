@@ -16,8 +16,8 @@
 	    FALLING
 	    NO_EDGE
 	    BOTH_FALLING_RISING
-	    gpio-event-wait
-	    gpio-event-detection-set!))
+	    gpio-edge-wait
+	    gpio-edge-detection-set!))
 
 (dynamic-call "scm_init_beagleio_gpio"
 	      (dynamic-link "guile-beagleio/.libs/libguile-beagleio"))
