@@ -5,9 +5,9 @@ static scm_t_bits gpio_tag;
 
 static int
 scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate) {
-  struct gpio *gpio;
+  Gpio *gpio;
   scm_assert_smob_type(gpio_tag, gpio_smob);
-  gpio = (struct gpio*) SCM_SMOB_DATA(gpio_smob);
+  gpio = (Gpio*) SCM_SMOB_DATA(gpio_smob);
   scm_puts("#<gpio channel=", port);
   scm_display(gpio->channel, port);
   scm_puts(" pin=", port);
@@ -19,25 +19,27 @@ scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate) {
 static size_t
 scm_gpio_free(SCM gpio_smob) {
   scm_assert_smob_type(gpio_tag, gpio_smob);
-  struct gpio *gpio = (struct gpio *) SCM_SMOB_DATA(gpio_smob);
-  scm_gc_free(gpio, sizeof(struct gpio), "gpio");
+  Gpio *gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  scm_gc_free(gpio, sizeof(Gpio), "gpio");
   return 0;
 }
 
 static SCM
 scm_gpio_mark(SCM gpio_smob) {
+  Gpio *gpio;
   scm_assert_smob_type(gpio_tag, gpio_smob);
-  struct gpio *gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   scm_gc_mark(gpio->channel);
   return (SCM) gpio->update_func;
 }
 
 static SCM
 scm_gpio_equalp(SCM gpio_smob, SCM other_gpio_smob ){
+  Gpio *gpio, *other;
   scm_assert_smob_type(gpio_tag, gpio_smob);
   scm_assert_smob_type(gpio_tag, other_gpio_smob);
-  struct gpio *gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  struct gpio *other = (struct gpio *) SCM_SMOB_DATA (other_gpio_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
+  other = (Gpio *) SCM_SMOB_DATA (other_gpio_smob);
   if ( gpio->pin_number == other->pin_number){
       return SCM_BOOL_T;
   }
@@ -55,8 +57,8 @@ scm_gpio_type_p(SCM smob) {
 SCM
 scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel) {
   SCM smob;
-  struct gpio *gpio;
-  gpio = (struct gpio *) scm_gc_malloc(sizeof(struct gpio), "gpio");
+  Gpio *gpio;
+  gpio = (Gpio *) scm_gc_malloc(sizeof(Gpio), "gpio");
   gpio->pin_number = *gpio_number;
   gpio->channel = SCM_BOOL_F;
   gpio->update_func = SCM_BOOL_F;
@@ -72,7 +74,7 @@ scm_assert_gpio_smob_type(SCM *smob) {
 
 void
 init_gpio_type(void) {
-  gpio_tag = scm_make_smob_type("gpio", sizeof(struct gpio));
+  gpio_tag = scm_make_smob_type("gpio", sizeof(Gpio));
   scm_set_smob_print(gpio_tag, scm_gpio_print);
   scm_set_smob_free(gpio_tag, scm_gpio_free);
   scm_set_smob_mark(gpio_tag, scm_gpio_mark);
