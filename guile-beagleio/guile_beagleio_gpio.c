@@ -4,7 +4,7 @@
 #include "event_gpio.h"
 #include "guile_beagleio_gpio.h"
 #include "scm_gpio_type.h"
-#include "scm_gpio_level_type.h"
+#include "scm_gpio_value_type.h"
 
 SCM
 scm_gpio_throw(char *message) {
@@ -85,7 +85,7 @@ set_value(SCM gpio_smob, SCM level_smob) {
   int level;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  level_smob_to_bbio_value(&level_smob, &level);
+  gpio_value_smob_to_bbio_value(&level_smob, &level);
   if( gpio_set_value(gpio->pin_number,(unsigned int) level) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio");
   }
@@ -98,10 +98,10 @@ get_value(SCM gpio_smob) {
   unsigned int value;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  if( gpio_get_value(gpio->pin_number, &value) == -1) {
+  if(gpio_get_value(gpio->pin_number, &value) == -1) {
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
   }
-  return scm_new_gpio_level_smob(&gpio->pin_number);
+  return scm_new_gpio_value_smob(&gpio->pin_number);
 }
 
 
@@ -112,7 +112,7 @@ scm_init_beagleio_gpio(void) {
     return;
 
   init_gpio_type();
-  init_gpio_level_type();
+  init_gpio_value_type();
   scm_c_define_gsubr("gpio-setup", 1, 0, 0, setup_channel);
   scm_c_define_gsubr("gpio-cleanup-all", 0, 0, 0, gpio_cleanup);
   scm_c_define_gsubr("gpio-direction-set!", 2, 0, 0, set_direction);
@@ -123,7 +123,7 @@ scm_init_beagleio_gpio(void) {
   scm_c_define("OUTPUT", scm_from_int(OUTPUT));
   scm_c_define_gsubr("gpio-value-set!", 2, 0, 0, set_value);
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
-  scm_c_define("HIGH", scm_gpio_level_high_smob());
-  scm_c_define("LOW", scm_gpio_level_low_smob());
+  scm_c_define("HIGH", scm_gpio_value_high_smob());
+  scm_c_define("LOW", scm_gpio_value_low_smob());
   initialized = 1;
 }
