@@ -41,7 +41,7 @@ setup_channel(SCM s_channel) {
 SCM
 set_direction(SCM gpio_smob, SCM s_direction) {
   struct gpio *gpio;
-
+  int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   direction = scm_to_int(s_direction);
