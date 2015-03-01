@@ -143,6 +143,20 @@
   (gpio-setup "P9_16"))
  (gpio-cleanup-all))
 
+(test-group-with-cleanup
+ "default setup"
+ (test-equal
+  "it always sets the direction to OUTPUT"
+  OUTPUT
+  (let ((gpio (gpio-setup "P8_3")))
+    (gpio-direction gpio)))
+ (test-equal
+  "it always sets the value to LOW"
+  LOW
+  (let ((gpio (gpio-setup "P8_3")))
+    (gpio-value gpio)))
+  (gpio-cleanup-all))
+
 (test-assert (number? INPUT))
 (test-assert (number? OUTPUT))
 (test-assert (not (equal? INPUT OUTPUT)))
@@ -235,16 +249,17 @@
 	 (read-line port)))))
   (gpio-cleanup-all))
  (test-group-with-cleanup
-  "setting the gpio to input and value to HIGH"
-  (test-equal
-   "1"
+  "setting the gpio setup as input"
+  (test-error
+   "raises error when setting to HIGH"
    (let ((gpio (gpio-setup "P8_3")))
-     (gpio-direction-set! gpio OUTPUT)
-     (gpio-value-set! gpio HIGH)
-     (call-with-input-file
-	 (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
-       (lambda (port)
-	 (read-line port)))))
+     (gpio-direction-set! gpio INPUT)
+     (gpio-value-set! gpio HIGH)))
+  (test-error
+   "raises error when setting to LOW"
+   (let ((gpio (gpio-setup "P8_4")))
+     (gpio-direction-set! gpio INPUT)
+     (gpio-value-set! gpio LOW)))
   (gpio-cleanup-all)))
 
 

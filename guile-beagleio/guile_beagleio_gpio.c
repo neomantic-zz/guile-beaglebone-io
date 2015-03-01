@@ -33,6 +33,9 @@ setup_channel(SCM s_channel) {
   if (gpio_export(gpio_number) != 0 )
     return scm_gpio_throw("unable to export to /sys/class/gpio");
 
+  gpio_set_direction(gpio_number, OUTPUT);
+  gpio_set_value(gpio_number, LOW);
+
   return scm_new_gpio_smob(&gpio_number, &s_channel);
 }
 
@@ -44,10 +47,10 @@ set_direction(SCM gpio_smob, SCM s_direction) {
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   direction = scm_to_int(s_direction);
 
-  if ( direction != INPUT && direction != OUTPUT)
+  if (direction != INPUT && direction != OUTPUT)
     return scm_gpio_throw("only accepts INPUT and OUTPUT");
 
-  if (gpio_set_direction(gpio->pin_number, direction) == -1 )
+  if (gpio_set_direction(gpio->pin_number, direction) == -1)
     return scm_gpio_throw("unable to write to /sys/class/gpio");
 
   return gpio_smob;
@@ -75,11 +78,16 @@ gpio_cleanup() {
 SCM
 set_value(SCM gpio_smob, SCM level_smob) {
   struct gpio *gpio;
-  int level;
+  int level, direction;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
   gpio_value_smob_to_bbio_value(&level_smob, &level);
-  if( gpio_set_value(gpio->pin_number,(unsigned int) level) == -1)
+  gpio_get_direction(gpio->pin_number, &direction);
+
+  if(direction != OUTPUT)
+    return scm_gpio_throw("The gpio channel has not been setup as output");
+
+  if(gpio_set_value(gpio->pin_number,(unsigned int) level) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio");
 
   return gpio_smob;
@@ -96,7 +104,6 @@ get_value(SCM gpio_smob) {
 
   return scm_new_gpio_value_smob(&gpio->pin_number);
 }
-
 
 void
 scm_init_beagleio_gpio(void) {
@@ -118,5 +125,6 @@ scm_init_beagleio_gpio(void) {
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
   scm_c_define("HIGH", scm_gpio_value_high_smob());
   scm_c_define("LOW", scm_gpio_value_low_smob());
+
   initialized = 1;
 }
