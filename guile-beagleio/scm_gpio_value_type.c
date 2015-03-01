@@ -11,8 +11,8 @@ typedef struct gpio_value {
   SCM update_func;
 } GpioValue;
 
-static const char *HIGH_PRINT = "HIGH";
-static const char *LOW_PRINT = "LOW";
+static const char *HIGH_PRINT = "high";
+static const char *LOW_PRINT = "low";
 
 unsigned int
 get_sysfs_value(const void* self) {
@@ -37,7 +37,7 @@ scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate) {
   GpioValue *gpio_value;
   scm_assert_smob_type(gpio_value_tag, gpio_value_smob);
   gpio_value = (GpioValue*)SCM_SMOB_DATA(gpio_value_smob);
-  scm_puts("#<gpio-value ", port);
+  scm_puts("#<gpio-value level: ", port);
   if (gpio_value->sysfs_value(gpio_value) == HIGH) {
     scm_puts(HIGH_PRINT, port);
   } else {
