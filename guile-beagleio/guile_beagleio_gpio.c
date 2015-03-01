@@ -39,21 +39,18 @@ setup_channel(SCM s_channel) {
 }
 
 SCM
-set_direction(SCM gpio_smob, SCM pud) {
+set_direction(SCM gpio_smob, SCM s_direction) {
   struct gpio *gpio;
+
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  int pud_int = scm_to_int(pud);
-  int success;
-  if ( pud_int == INPUT ) {
-    success = gpio_set_direction(gpio->pin_number, pud_int);
-  } else if ( pud_int == OUTPUT ){
-    success = gpio_set_direction(gpio->pin_number, pud_int);
-  } else {
+  direction = scm_to_int(s_direction);
+
+  if ( direction != INPUT && direction != OUTPUT) {
     return scm_gpio_throw("only accepts INPUT and OUTPUT");
   }
 
-  if (success == -1 ) {
+  if (gpio_set_direction(gpio->pin_number, direction) == -1 ) {
     return scm_gpio_throw("unable to write to /sys/class/gpio");
   }
 
