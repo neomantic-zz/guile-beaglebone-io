@@ -1,8 +1,11 @@
 /*
+Copyright (c) 2015 Chad Albers
+
 Copyright (c) 2013 Adafruit
 
 Original RPi.GPIO Author Ben Croston
 Modified for BBIO Author Justin Cooper
+Modified for Guile Beaglebone IO Author Chad Albers
 
 This file incorporates work covered by the following copyright and
 permission notice, all modified code adopts the original license:
@@ -34,9 +37,6 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-int setup_error = 0;
-int module_setup = 0;
 
 typedef struct pins_t {
     const char *name;
@@ -147,23 +147,6 @@ pins_t table[] = {
     { NULL, NULL, 0 }
 };
 
-typedef struct uart_t {
-    const char *name;
-    const char *path;
-    const char *dt;
-    const char *rx;
-    const char *tx;
-} uart_t;
-
-uart_t uart_table[] = {
-  { "UART1", "/dev/ttyO1", "ADAFRUIT-UART1", "P9_26", "P9_24"},
-  { "UART2", "/dev/ttyO2", "ADAFRUIT-UART2", "P9_22", "P9_21"},
-  { "UART3", "/dev/ttyO3", "ADAFRUIT-UART3", "P9_42", ""},
-  { "UART4", "/dev/ttyO4", "ADAFRUIT-UART4", "P9_11", "P9_13"},
-  { "UART5", "/dev/ttyO5", "ADAFRUIT-UART5", "P8_38", "P8_37"},
-  { NULL, NULL, 0 }
-};
-
 int lookup_gpio_by_key(const char *key)
 {
   pins_t *p;
@@ -186,84 +169,6 @@ int lookup_gpio_by_name(const char *name)
   return 0;
 }
 
-int lookup_ain_by_key(const char *key)
-{
-  pins_t *p;
-  for (p = table; p->key != NULL; ++p) {
-      if (strcmp(p->key, key) == 0) {
-        if (p->ain == -1) {
-          return -1;
-        } else {
-          return p->ain;
-        }
-      }
-  }
-  return -1;
-}
-
-int lookup_ain_by_name(const char *name)
-{
-  pins_t *p;
-  for (p = table; p->name != NULL; ++p) {
-      if (strcmp(p->name, name) == 0) {
-        if (p->ain == -1) {
-          return -1;
-        } else {
-          return p->ain;
-        }
-      }
-  }
-  return -1;
-}
-
-int lookup_uart_by_name(const char *input_name, char *dt)
-{
-    uart_t *p;
-    for (p = uart_table; p->name != NULL; ++p) {
-        if (strcmp(p->name, input_name) == 0) {
-            strncpy(dt, p->dt, FILENAME_BUFFER_SIZE);
-            dt[FILENAME_BUFFER_SIZE - 1] = '\0';
-            return 1;
-        }
-    }
-    fprintf(stderr, "return 0 lookup_uart_by_name");
-    return 0;
-}
-
-int copy_pwm_key_by_key(const char *input_key, char *key)
-{
-    pins_t *p;
-    for (p = table; p->key != NULL; ++p) {
-        if (strcmp(p->key, input_key) == 0) {
-            //validate it's a valid pwm pin
-            if (p->pwm_mux_mode == -1)
-                return 0;
-
-            strncpy(key, p->key, 7);
-            key[7] = '\0';
-            return 1;
-        }
-    }
-    return 0;
-}
-
-int get_pwm_key_by_name(const char *name, char *key)
-{
-    pins_t *p;
-    for (p = table; p->name != NULL; ++p) {
-        if (strcmp(p->name, name) == 0) {
-            //validate it's a valid pwm pin
-            if (p->pwm_mux_mode == -1)
-                return 0;
-
-            strncpy(key, p->key, 7);
-            key[7] = '\0';
-            return 1;
-        }
-    }
-    return 0;
-}
-
 int get_gpio_number(const char *key, unsigned int *gpio)
 {
     *gpio = lookup_gpio_by_key(key);
@@ -273,160 +178,4 @@ int get_gpio_number(const char *key, unsigned int *gpio)
     }
 
     return 0;
-}
-
-int get_pwm_key(const char *input, char *key)
-{
-    if (!copy_pwm_key_by_key(input, key)) {
-        return get_pwm_key_by_name(input, key);
-    }
-
-    return 1;
-}
-
-int get_adc_ain(const char *key, unsigned int *ain)
-{
-    *ain = lookup_ain_by_key(key);
-
-    if (*ain == -1) {
-        *ain = lookup_ain_by_name(key);
-
-        if (*ain == -1) {
-          return 0;
-        }
-    }
-
-    return 1;
-}
-
-int get_uart_device_tree_name(const char *name, char *dt)
-{
-    if (!lookup_uart_by_name(name, dt)) {
-      fprintf(stderr, "return 0 get_uart");
-        return 0;
-    }
-
-    return 1;
-}
-
-int build_path(const char *partial_path, const char *prefix, char *full_path, size_t full_path_len)
-{
-    DIR *dp;
-    struct dirent *ep;
-
-    dp = opendir (partial_path);
-    if (dp != NULL) {
-        while ((ep = readdir (dp))) {
-            // Enforce that the prefix must be the first part of the file
-            char* found_string = strstr(ep->d_name, prefix);
-
-            if (found_string != NULL && (ep->d_name - found_string) == 0) {
-                snprintf(full_path, full_path_len, "%s/%s", partial_path, ep->d_name);
-                (void) closedir (dp);
-                return 1;
-            }
-        }
-        (void) closedir (dp);
-    } else {
-        return 0;
-    }
-
-    return 0;
-}
-
-int get_spi_bus_path_number(unsigned int spi)
-{
-  char path[50];
-
-  build_path("/sys/devices", "ocp", ocp_dir, sizeof(ocp_dir));
-
-  if (spi == 0) {
-    snprintf(path, sizeof(path), "%s/48030000.spi/spi_master/spi1", ocp_dir);
-  } else {
-    snprintf(path, sizeof(path), "%s/481a0000.spi/spi_master/spi1", ocp_dir);
-  }
-
-  DIR* dir = opendir(path);
-  if (dir) {
-    closedir(dir);
-    //device is using /dev/spidev1.x
-    return 1;
-  } else if (ENOENT == errno) {
-    //device is using /dev/spidev2.x
-    return 2;
-  } else {
-    return -1;
-  }
-}
-
-
-int load_device_tree(const char *name)
-{
-    FILE *file = NULL;
-    char slots[40];
-    char line[256];
-
-    build_path("/sys/devices", "bone_capemgr", ctrl_dir, sizeof(ctrl_dir));
-    snprintf(slots, sizeof(slots), "%s/slots", ctrl_dir);
-
-    file = fopen(slots, "r+");
-    if (!file) {
-      /* FIXME:  */
-      //  PyErr_SetFromErrnoWithFilename(PyExc_IOError, slots);
-        return 0;
-    }
-
-    while (fgets(line, sizeof(line), file)) {
-        //the device is already loaded, return 1
-        if (strstr(line, name)) {
-            fclose(file);
-            return 1;
-        }
-    }
-
-    //if the device isn't already loaded, load it, and return
-    fprintf(file, name);
-    fclose(file);
-
-    //0.2 second delay
-    nanosleep((struct timespec[]){{0, 200000000}}, NULL);
-
-    return 1;
-}
-
-int unload_device_tree(const char *name)
-{
-    FILE *file = NULL;
-    char slots[40];
-    char line[256];
-    char *slot_line;
-
-    build_path("/sys/devices", "bone_capemgr", ctrl_dir, sizeof(ctrl_dir));
-    snprintf(slots, sizeof(slots), "%s/slots", ctrl_dir);
-
-    file = fopen(slots, "r+");
-    if (!file) {
-      /* FIXME:  */
-      //PyErr_SetFromErrnoWithFilename(PyExc_IOError, slots);
-        return 0;
-    }
-
-    while (fgets(line, sizeof(line), file)) {
-        //the device is loaded, let's unload it
-        if (strstr(line, name)) {
-            slot_line = strtok(line, ":");
-            //remove leading spaces
-            while(*slot_line == ' ')
-                slot_line++;
-
-            fprintf(file, "-%s", slot_line);
-            fclose(file);
-            return 1;
-        }
-    }
-
-    //not loaded, close file
-    fclose(file);
-
-    return 1;
 }
