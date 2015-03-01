@@ -7,12 +7,14 @@
 #include "scm_gpio_value_type.h"
 
 SCM
-scm_gpio_throw(char *message) {
+scm_gpio_throw(char *message)
+{
   return scm_throw(scm_from_utf8_symbol("gpio-error"), scm_list_1(scm_from_utf8_string(message)));
 }
 
 SCM
-lookup_gpio_number(SCM s_channel) {
+lookup_gpio_number(SCM s_channel)
+{
   unsigned int gpio_number;
   char *channel = scm_to_locale_string(s_channel);
   get_gpio_number(channel, &gpio_number);
@@ -23,7 +25,8 @@ lookup_gpio_number(SCM s_channel) {
 }
 
 SCM
-setup_channel(SCM s_channel) {
+setup_channel(SCM s_channel)
+{
   unsigned int gpio_number;
   get_gpio_number(scm_to_locale_string(s_channel), &gpio_number);
 
@@ -40,7 +43,8 @@ setup_channel(SCM s_channel) {
 }
 
 SCM
-set_direction(SCM gpio_smob, SCM s_direction) {
+set_direction(SCM gpio_smob, SCM s_direction)
+{
   struct gpio *gpio;
   int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
@@ -57,7 +61,8 @@ set_direction(SCM gpio_smob, SCM s_direction) {
 }
 
 SCM
-get_direction(SCM gpio_smob) {
+get_direction(SCM gpio_smob)
+{
   struct gpio *gpio;
   unsigned int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
@@ -70,13 +75,15 @@ get_direction(SCM gpio_smob) {
 
 
 SCM
-gpio_cleanup() {
+gpio_cleanup()
+{
   event_cleanup();
   return SCM_UNDEFINED;
 }
 
 SCM
-set_value(SCM gpio_smob, SCM level_smob) {
+set_value(SCM gpio_smob, SCM level_smob)
+{
   struct gpio *gpio;
   int level, direction;
   scm_assert_gpio_smob_type(&gpio_smob);
@@ -94,7 +101,8 @@ set_value(SCM gpio_smob, SCM level_smob) {
 }
 
 SCM
-get_value(SCM gpio_smob) {
+get_value(SCM gpio_smob)
+{
   struct gpio *gpio;
   unsigned int value;
   scm_assert_gpio_smob_type(&gpio_smob);
@@ -106,7 +114,8 @@ get_value(SCM gpio_smob) {
 }
 
 void
-scm_init_beagleio_gpio(void) {
+scm_init_beagleio_gpio(void)
+{
   static int initialized = 0;
   if (initialized)
     return;

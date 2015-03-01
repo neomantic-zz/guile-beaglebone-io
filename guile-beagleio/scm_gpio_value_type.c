@@ -15,7 +15,8 @@ static const char *HIGH_PRINT = "high";
 static const char *LOW_PRINT = "low";
 
 unsigned int
-get_sysfs_value(const void* self) {
+get_sysfs_value(const void* self)
+{
   unsigned int value;
   GpioValue *me = (GpioValue*)self;
   if (!me->pin_number) {
@@ -33,7 +34,8 @@ get_sysfs_value(const void* self) {
 }
 
 static int
-scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate) {
+scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate)
+{
   GpioValue *gpio_value;
   scm_assert_smob_type(gpio_value_tag, gpio_value_smob);
   gpio_value = (GpioValue*)SCM_SMOB_DATA(gpio_value_smob);
@@ -48,7 +50,8 @@ scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate) {
 }
 
 static size_t
-scm_gpio_value_free(SCM gpio_value_smob) {
+scm_gpio_value_free(SCM gpio_value_smob)
+{
   GpioValue *gpio_value;
   scm_assert_smob_type(gpio_value_tag, gpio_value_smob);
   gpio_value = (GpioValue*) SCM_SMOB_DATA(gpio_value_smob);
@@ -57,20 +60,21 @@ scm_gpio_value_free(SCM gpio_value_smob) {
 }
 
 static SCM
-scm_gpio_value_equalp(SCM gpio_value_smob, SCM other_gpio_value_smob) {
+scm_gpio_value_equalp(SCM gpio_value_smob, SCM other_gpio_value_smob)
+{
   GpioValue *gpio_value, *other_gpio_value;
   scm_assert_smob_type(gpio_value_tag, gpio_value_smob);
   scm_assert_smob_type(gpio_value_tag, other_gpio_value_smob);
   gpio_value = (GpioValue*) SCM_SMOB_DATA(gpio_value_smob);
   other_gpio_value = (GpioValue*) SCM_SMOB_DATA(other_gpio_value_smob);
-  if (gpio_value->sysfs_value(gpio_value) == other_gpio_value->sysfs_value(other_gpio_value)) {
+  if (gpio_value->sysfs_value(gpio_value) == other_gpio_value->sysfs_value(other_gpio_value))
     return SCM_BOOL_T;
-  }
   return SCM_BOOL_F;
 }
 
 SCM
-scm_new_gpio_value_smob(unsigned int *pin_number) {
+scm_new_gpio_value_smob(unsigned int *pin_number)
+{
   GpioValue *gpio_value;
   gpio_value = (GpioValue*) scm_gc_malloc(sizeof(GpioValue), "gpio-value");
   gpio_value->pin_number = *pin_number;
@@ -81,7 +85,8 @@ scm_new_gpio_value_smob(unsigned int *pin_number) {
 }
 
 static SCM
-make_default_value(const char *view) {
+make_default_value(const char *view)
+{
   GpioValue *gpio_value;
   gpio_value = (GpioValue *) scm_gc_malloc(sizeof(GpioValue), "gpio-value");
   gpio_value->update_func = SCM_BOOL_F;
@@ -91,17 +96,20 @@ make_default_value(const char *view) {
 }
 
 SCM
-scm_gpio_value_high_smob(void) {
+scm_gpio_value_high_smob(void)
+{
   return make_default_value(HIGH_PRINT);
 }
 
 SCM
-scm_gpio_value_low_smob(void) {
+scm_gpio_value_low_smob(void)
+{
   return make_default_value(LOW_PRINT);
 }
 
 void
-init_gpio_value_type(void) {
+init_gpio_value_type(void)
+{
   gpio_value_tag = scm_make_smob_type("gpio-value", sizeof(GpioValue));
   scm_set_smob_print(gpio_value_tag, scm_gpio_value_print);
   scm_set_smob_free(gpio_value_tag, scm_gpio_value_free);
@@ -109,7 +117,8 @@ init_gpio_value_type(void) {
 }
 
 void
-gpio_value_smob_to_bbio_value(SCM *value_smob, int *value) {
+gpio_value_smob_to_bbio_value(SCM *value_smob, int *value)
+{
   GpioValue *gpio_value;
   scm_assert_smob_type(gpio_value_tag, *value_smob);
   gpio_value = (GpioValue *) SCM_SMOB_DATA (*value_smob);
