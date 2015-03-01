@@ -8,9 +8,9 @@ scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate) {
   Gpio *gpio;
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (Gpio*) SCM_SMOB_DATA(gpio_smob);
-  scm_puts("#<gpio channel=", port);
+  scm_puts("#<gpio channel: ", port);
   scm_display(gpio->channel, port);
-  scm_puts(" pin=", port);
+  scm_puts(" pin: ", port);
   scm_display(scm_from_unsigned_integer(gpio->pin_number), port);
   scm_puts(">", port);
   return 1;
