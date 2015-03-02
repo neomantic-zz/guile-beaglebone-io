@@ -4,6 +4,7 @@
 #include "event_gpio.h"
 #include "guile_beagleio_gpio.h"
 #include "scm_gpio_type.h"
+#include "scm_gpio_setting_type.h"
 #include "scm_gpio_value_type.h"
 
 SCM
@@ -82,19 +83,21 @@ gpio_cleanup()
 }
 
 SCM
-set_value(SCM gpio_smob, SCM level_smob)
+set_value(SCM gpio_smob, SCM gpio_value_smob)
 {
-  struct gpio *gpio;
-  int level, direction;
+  Gpio *gpio;
+  GpioValue *gpio_value;
+  unsigned int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
-  gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  gpio_value_smob_to_bbio_value(&level_smob, &level);
+  scm_assert_gpio_setting_smob(&gpio_value_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
   gpio_get_direction(gpio->pin_number, &direction);
 
   if(direction != OUTPUT)
     return scm_gpio_throw("The gpio channel has not been setup as output");
 
-  if(gpio_set_value(gpio->pin_number,(unsigned int) level) == -1)
+  gpio_value = (GpioValue *) SCM_SMOB_DATA(gpio_value_smob);
+  if(gpio_set_value(gpio->pin_number, gpio_value->sysfs_value) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio");
 
   return gpio_smob;
@@ -103,14 +106,14 @@ set_value(SCM gpio_smob, SCM level_smob)
 SCM
 get_value(SCM gpio_smob)
 {
-  struct gpio *gpio;
+  Gpio *gpio;
   unsigned int value;
   scm_assert_gpio_smob_type(&gpio_smob);
-  gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   if(gpio_get_value(gpio->pin_number, &value) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
 
-  return scm_new_gpio_value_smob(&gpio->pin_number);
+  return scm_new_gpio_value_smob(value);
 }
 
 void
