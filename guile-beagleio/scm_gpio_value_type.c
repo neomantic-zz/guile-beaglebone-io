@@ -51,24 +51,13 @@ scm_gpio_value_equalp(SCM gpio_value_smob, SCM other_gpio_value_smob)
 }
 
 SCM
-scm_new_gpio_value_smob(int value)
+scm_new_gpio_value_smob(const int value)
 {
   GpioValue *gpio_value;
   gpio_value = (GpioValue*) scm_gc_malloc(sizeof(GpioValue), "gpio-value");
   gpio_value->update_func = SCM_BOOL_F;
   gpio_value->sysfs_value = value;
   return scm_new_smob(gpio_value_tag, (scm_t_bits) gpio_value);
-}
-SCM
-scm_gpio_value_high_smob(void)
-{
-  return scm_new_gpio_value_smob(HIGH);
-}
-
-SCM
-scm_gpio_value_low_smob(void)
-{
-  return scm_new_gpio_value_smob(LOW);
 }
 
 void

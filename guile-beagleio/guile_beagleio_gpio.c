@@ -135,8 +135,8 @@ scm_init_beagleio_gpio(void)
   scm_c_define("OUTPUT", scm_from_int(OUTPUT));
   scm_c_define_gsubr("gpio-value-set!", 2, 0, 0, set_value);
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
-  scm_c_define("HIGH", scm_gpio_value_high_smob());
-  scm_c_define("LOW", scm_gpio_value_low_smob());
+  scm_c_define("HIGH", scm_new_gpio_value_smob(HIGH));
+  scm_c_define("LOW", scm_new_gpio_value_smob(LOW));
 
   initialized = 1;
 }
