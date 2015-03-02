@@ -82,19 +82,22 @@ gpio_cleanup()
 }
 
 SCM
-set_value(SCM gpio_smob, SCM level_smob)
+set_value(SCM gpio_smob, SCM value_smob)
 {
   struct gpio *gpio;
-  int level, direction;
+  GpioValue *gpio_value;
+  int direction;
+  unsigned int level;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  gpio_value_smob_to_bbio_value(&level_smob, &level);
-  gpio_get_direction(gpio->pin_number, &direction);
+  gpio_value = (GpioValue*) SCM_SMOB_DATA (gpio_smob);
+  level = gpio_value->sysfs-value(gpio_value);
+  direction = gpio->sysfs-value(gpio);
 
   if(direction != OUTPUT)
     return scm_gpio_throw("The gpio channel has not been setup as output");
 
-  if(gpio_set_value(gpio->pin_number,(unsigned int) level) == -1)
+  if(gpio_set_value(gpio->pin_number, level) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio");
 
   return gpio_smob;
@@ -107,6 +110,7 @@ get_value(SCM gpio_smob)
   unsigned int value;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
+
   if(gpio_get_value(gpio->pin_number, &value) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
 

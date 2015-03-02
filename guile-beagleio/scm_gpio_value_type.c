@@ -4,13 +4,6 @@
 
 static scm_t_bits gpio_value_tag;
 
-typedef struct gpio_value {
-  unsigned int pin_number;
-  unsigned int (*sysfs_value)(const void* self);
-  const char *view;
-  SCM update_func;
-} GpioValue;
-
 static const char *HIGH_PRINT = "high";
 static const char *LOW_PRINT = "low";
 
@@ -19,18 +12,20 @@ get_sysfs_value(const void* self)
 {
   unsigned int value;
   GpioValue *me = (GpioValue*)self;
-  if (!me->pin_number) {
-    if (strcmp(me->view, HIGH_PRINT) == 0) {
-      return HIGH;
-    } else {
-      return LOW;
-    }
-  } else {
+  if (me->pin_number) {
     if (gpio_get_value((unsigned int) me->pin_number, &value) == -1) {
-      return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
+      if (me->sysfs == HIGH) {
+	return HIGH;
+      }
+      return LOW;
+    } else {
+      return value;
     }
   }
-  return value;
+  if (me->sysfs == HIGH) {
+    return HIGH;
+  }
+  return LOW;
 }
 
 static int

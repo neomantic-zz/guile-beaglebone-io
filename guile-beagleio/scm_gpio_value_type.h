@@ -8,4 +8,12 @@ SCM scm_gpio_value_high_smob(void);
 SCM scm_gpio_value_low_smob(void);
 SCM scm_new_gpio_value_smob(unsigned int *pin_number);
 
+typedef struct gpio_value {
+  unsigned int pin_number;
+  unsigned int (*sysfs_value)(const void* self);
+  const char *view;
+  SCM update_func;
+} GpioValue;
+
+
 #endif
