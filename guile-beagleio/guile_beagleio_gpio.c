@@ -44,19 +44,24 @@ setup_channel(SCM s_channel)
 }
 
 SCM
-set_direction(SCM gpio_smob, SCM s_direction)
+set_direction(SCM gpio_smob, SCM gpio_direction_smob)
 {
-  struct gpio *gpio;
-  int direction;
+  Gpio *gpio;
+  GpioDirection *gpio_direction;
   scm_assert_gpio_smob_type(&gpio_smob);
-  gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  direction = scm_to_int(s_direction);
+  scm_assert_gpio_direction_smob(&gpio_direction_smob);
 
-  if (direction != INPUT && direction != OUTPUT)
+  gpio_direction = (GpioDirection *) SCM_SMOB_DATA (gpio_direction_smob);
+
+  if (direction->bbio_value != INPUT && direction->bbio_value != OUTPUT)
     return scm_gpio_throw("only accepts INPUT and OUTPUT");
 
-  if (gpio_set_direction(gpio->pin_number, direction) == -1)
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+
+  if (gpio_set_direction(gpio->pin_number, gpio_direction->bbio_value) == -1)
     return scm_gpio_throw("unable to write to /sys/class/gpio");
+
+  gpio->bbio_direction = gpio_direction->bbio_value;
 
   return gpio_smob;
 }
@@ -64,19 +69,16 @@ set_direction(SCM gpio_smob, SCM s_direction)
 SCM
 get_direction(SCM gpio_smob)
 {
-  struct gpio *gpio;
+  Ggpio *gpio;
   unsigned int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
-  gpio = (struct gpio *) SCM_SMOB_DATA (gpio_smob);
-  if (gpio_get_direction(gpio->pin_number, &direction) == -1)
-    return scm_gpio_throw("unable to read /sys/class/gpio");
-
-  return scm_from_int(direction);
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  return scm_new_direction_smob(gpio->direction(gpio));
 }
 
 
 SCM
-gpio_cleanup()
+gpio_cleanup(void)
 {
   event_cleanup();
   return SCM_UNDEFINED;
@@ -91,13 +93,12 @@ set_value(SCM gpio_smob, SCM gpio_value_smob)
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_setting_smob(&gpio_value_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-  gpio_get_direction(gpio->pin_number, &direction);
 
   if(direction != OUTPUT)
     return scm_gpio_throw("The gpio channel has not been setup as output");
 
-  gpio_value = (GpioValue *) SCM_SMOB_DATA(gpio_value_smob);
-  if(gpio_set_value(gpio->pin_number, gpio_value->sysfs_value) == -1)
+  gpio_value = (GpioValue *)SCM_SMOB_DATA(gpio_value_smob);
+  if(gpio_set_value(gpio->pin_number, gpio_value->bbio_value) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio");
 
   return gpio_smob;

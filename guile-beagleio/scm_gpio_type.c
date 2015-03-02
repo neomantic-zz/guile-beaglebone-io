@@ -3,6 +3,24 @@
 
 static scm_t_bits gpio_tag;
 
+unsigned int
+direction(const void* self)
+{
+  unsigned int sysfs_direction;
+  unsigned int pin_number;
+  Gpio *me = (Gpio*)self;
+  pin_number = (unsigned int) me->pin_number;
+  if (gpio_get_direction(pin_number, &sysfs_direction) == -1)
+    return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
+
+  if (sysfs_direction != me->bbio_direction) {
+    gpio_set_direction(pin_number, me->bbio_direction)
+  }
+
+  return me->bbio_direction;
+}
+
+
 static int
 scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate)
 {
