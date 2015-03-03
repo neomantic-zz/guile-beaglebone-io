@@ -91,7 +91,7 @@ set_value(SCM gpio_smob, SCM gpio_value_smob)
   GpioValue *gpio_value;
   unsigned int direction;
   scm_assert_gpio_smob_type(&gpio_smob);
-  scm_assert_gpio_setting_smob(&gpio_value_smob);
+  scm_assert_gpio_value_smob(&gpio_value_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
 
   if(direction != OUTPUT)
