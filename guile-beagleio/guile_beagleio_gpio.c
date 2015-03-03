@@ -6,6 +6,7 @@
 #include "scm_gpio_type.h"
 #include "scm_gpio_setting_type.h"
 #include "scm_gpio_value_type.h"
+#include "scm_gpio_direction_type.h"
 
 SCM
 scm_gpio_throw(char *message)
@@ -51,9 +52,9 @@ set_direction(SCM gpio_smob, SCM gpio_direction_smob)
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_direction_smob(&gpio_direction_smob);
 
-  gpio_direction = (GpioDirection *) SCM_SMOB_DATA (gpio_direction_smob);
+  gpio_direction = (GpioDirection *)SCM_SMOB_DATA(gpio_direction_smob);
 
-  if (direction->bbio_value != INPUT && direction->bbio_value != OUTPUT)
+  if (gpio_direction->bbio_value != INPUT && gpio_direction->bbio_value != OUTPUT)
     return scm_gpio_throw("only accepts INPUT and OUTPUT");
 
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
@@ -61,7 +62,7 @@ set_direction(SCM gpio_smob, SCM gpio_direction_smob)
   if (gpio_set_direction(gpio->pin_number, gpio_direction->bbio_value) == -1)
     return scm_gpio_throw("unable to write to /sys/class/gpio");
 
-  gpio->bbio_direction = gpio_direction->bbio_value;
+  gpio->past_bbio_direction = gpio_direction->bbio_value;
 
   return gpio_smob;
 }
@@ -69,13 +70,19 @@ set_direction(SCM gpio_smob, SCM gpio_direction_smob)
 SCM
 get_direction(SCM gpio_smob)
 {
-  Ggpio *gpio;
+  Gpio *gpio;
   unsigned int direction;
+  int success;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-  return scm_new_direction_smob(gpio->direction(gpio));
-}
+  success = gpio->direction(gpio, &direction);
+  if (success == 0)
+    return scm_new_direction_smob(direction);
 
+  if (success != -1)
+    return scm_gpio_throw("unable to write /sys/class/gpio/*/direction to reset it");
+  return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
+}
 
 SCM
 gpio_cleanup(void)
@@ -89,12 +96,20 @@ set_value(SCM gpio_smob, SCM gpio_value_smob)
 {
   Gpio *gpio;
   GpioValue *gpio_value;
-  unsigned int direction;
+  int success;
+  unsigned int current_direction;
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_value_smob(&gpio_value_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
 
-  if(direction != OUTPUT)
+  success = gpio->direction(gpio, &current_direction);
+  if (success != 0) {
+    if (success == -1)
+      return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
+    return scm_gpio_throw("unable to write /sys/class/gpio/*/direction to reset it");
+  }
+
+  if(current_direction != OUTPUT)
     return scm_gpio_throw("The gpio channel has not been setup as output");
 
   gpio_value = (GpioValue *)SCM_SMOB_DATA(gpio_value_smob);
@@ -126,14 +141,15 @@ scm_init_beagleio_gpio(void)
 
   init_gpio_type();
   init_gpio_value_type();
+  init_gpio_direction_type();
   scm_c_define_gsubr("gpio-setup", 1, 0, 0, setup_channel);
   scm_c_define_gsubr("gpio-cleanup-all", 0, 0, 0, gpio_cleanup);
   scm_c_define_gsubr("gpio-direction-set!", 2, 0, 0, set_direction);
   scm_c_define_gsubr("gpio-direction", 1, 0, 0, get_direction);
   scm_c_define_gsubr("gpio-number-lookup", 1, 0, 0, lookup_gpio_number);
   scm_c_define_gsubr("gpio?", 1, 0, 0, scm_gpio_type_p);
-  scm_c_define("INPUT", scm_from_int(INPUT));
-  scm_c_define("OUTPUT", scm_from_int(OUTPUT));
+  scm_c_define("INPUT", scm_new_gpio_direction_smob(INPUT));
+  scm_c_define("OUTPUT", scm_new_gpio_direction_smob(OUTPUT));
   scm_c_define_gsubr("gpio-value-set!", 2, 0, 0, set_value);
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
   scm_c_define("HIGH", scm_new_gpio_value_smob(HIGH));

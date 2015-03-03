@@ -1,23 +1,27 @@
+#include "event_gpio.h"
 #include "guile_beagleio_gpio.h"
 #include "scm_gpio_type.h"
 
 static scm_t_bits gpio_tag;
 
-unsigned int
-direction(const void* self)
+int
+direction(const void* self, unsigned int *direction)
 {
-  unsigned int sysfs_direction;
+  unsigned int current_bbio_direction;
   unsigned int pin_number;
   Gpio *me = (Gpio*)self;
   pin_number = (unsigned int) me->pin_number;
-  if (gpio_get_direction(pin_number, &sysfs_direction) == -1)
-    return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
 
-  if (sysfs_direction != me->bbio_direction) {
-    gpio_set_direction(pin_number, me->bbio_direction)
+  if (gpio_get_direction(pin_number, &current_bbio_direction) == -1)
+    return -1;
+
+  if (current_bbio_direction != me->past_bbio_direction) {
+    if (gpio_set_direction(pin_number, me->past_bbio_direction) == -1) {
+	return -2;
+    }
   }
-
-  return me->bbio_direction;
+  *direction = me->past_bbio_direction;
+  return 0;
 }
 
 

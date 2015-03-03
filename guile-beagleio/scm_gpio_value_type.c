@@ -18,7 +18,7 @@ scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate)
   scm_assert_gpio_value_smob(&gpio_value_smob);
   gpio_value = (GpioValue*)SCM_SMOB_DATA(gpio_value_smob);
   scm_puts("#<gpio-value level: ", port);
-  if (gpio_value->sysfs_value == HIGH) {
+  if (gpio_value->bbio_value == HIGH) {
     scm_puts("high", port);
   } else {
     scm_puts("low", port);
@@ -45,7 +45,7 @@ scm_gpio_value_equalp(SCM gpio_value_smob, SCM other_gpio_value_smob)
   scm_assert_gpio_value_smob(&other_gpio_value_smob);
   gpio_value = (GpioValue*) SCM_SMOB_DATA(gpio_value_smob);
   other_gpio_value = (GpioValue*) SCM_SMOB_DATA(other_gpio_value_smob);
-  if (gpio_value->sysfs_value == other_gpio_value->sysfs_value)
+  if (gpio_value->bbio_value == other_gpio_value->bbio_value)
     return SCM_BOOL_T;
   return SCM_BOOL_F;
 }
@@ -56,7 +56,7 @@ scm_new_gpio_value_smob(const int value)
   GpioValue *gpio_value;
   gpio_value = (GpioValue*) scm_gc_malloc(sizeof(GpioValue), "gpio-value");
   gpio_value->update_func = SCM_BOOL_F;
-  gpio_value->sysfs_value = value;
+  gpio_value->bbio_value = value;
   return scm_new_smob(gpio_value_tag, (scm_t_bits) gpio_value);
 }
 

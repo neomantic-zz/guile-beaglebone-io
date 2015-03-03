@@ -3,8 +3,8 @@
 #include <libguile.h>
 
 typedef struct gpio_setting {
-  int sysfs_value;
+  int bbio_value;
   SCM update_func;
-} GpioValue;
+} GpioValue, GpioDirection;
 
 #endif
