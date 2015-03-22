@@ -5,6 +5,6 @@
 typedef struct gpio_setting {
   int bbio_value;
   SCM update_func;
-} GpioValue, GpioDirection;
+} GpioValue, GpioDirection, GpioEdge;
 
 #endif

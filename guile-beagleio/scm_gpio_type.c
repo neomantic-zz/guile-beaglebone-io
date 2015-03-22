@@ -5,6 +5,18 @@
 static scm_t_bits gpio_tag;
 
 int
+setEdge(const void* self, int new_edge)
+{
+  Gpio *me;
+  unsigned int current_direction;
+
+  me = (Gpio*)self;
+  if (me->getDirection(me, &current_direction) == 0 &&
+      current_direction != INPUT)
+    return -2;
+
+  return gpio_set_edge((unsigned int) me->pin_number, new_edge);
+}
 setValue(const void* self, int new_value)
 {
   unsigned int current_direction;
@@ -134,6 +146,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->setDirection = &setDirection;
   gpio->setValue = &setValue;
   gpio->getValue = &getValue;
+  gpio->setEdge = &setEdge;
   return smob;
 }
 
