@@ -155,6 +155,29 @@ set_edge(SCM gpio_smob,  SCM gpio_edge_smob)
   return scm_gpio_throw("unable to write to /sys/class/gpio/*/value");
 }
 
+SCM
+append_callback(SCM gpio_smob, SCM procedure)
+{
+  Gpio *gpio;
+  int success;
+
+  scm_assert_gpio_smob_type(&gpio_smob);
+
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  success = gpio->appendEventCallback(gpio, procedure);
+
+  /* TODO:  Make this pretty*/
+  if (success == -1)
+      return scm_gpio_throw("unable to read to /sys/class/gpio/*/direction");
+
+  if (success == -2 )
+    return scm_gpio_throw("The gpio export must be set to INPUT");
+
+  if (success == -3)
+    return scm_gpio_throw("Add event detection using gpio-edge-set first before adding a callback");
+
+  return gpio_smob;
+}
 
 void
 scm_init_beagleio_gpio(void)
@@ -186,6 +209,7 @@ scm_init_beagleio_gpio(void)
   scm_c_define("RISING", scm_new_gpio_edge_smob(RISING));
   scm_c_define("FALLING", scm_new_gpio_edge_smob(FALLING));
   scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
+  scm_c_define_gsubr("gpio-callback-append", 2, 0, 0, append_callback);
 
   initialized = 1;
 }

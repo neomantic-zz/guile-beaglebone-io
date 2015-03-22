@@ -66,11 +66,12 @@ run_scm_callbacks(unsigned int callback_pin_number)
 
 
 int
-addEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
+appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
 {
   Gpio *me;
   struct scm_callback *new_scm_callback;
   struct scm_callback *current_callback = scm_gpio_callbacks;
+  unsigned int current_direction;
 
   new_scm_callback = malloc(sizeof(struct scm_callback));
 
@@ -79,6 +80,16 @@ addEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
   }
 
   me = (Gpio *) self;
+
+  if (!gpio_is_evented((unsigned int) gpio->pin_number))
+    return -3;
+
+  if (gpio->getDirection(gpio, &current_direction != 0))
+    return -1;
+
+  if (current_direction != INPUT)
+    return -2;
+
   new_scm_callback->procedure = procedure;
   new_scm_callback->gpio = me;
   new_scm_callback->lastcall = 0;
@@ -230,7 +241,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->setValue = &setValue;
   gpio->getValue = &getValue;
   gpio->setEdge = &setEdge;
-  gpio->addEventCallback = &addEventCallback;
+  gpio->appendEventCallback = &appendEventCallback;
   return smob;
 }
 
