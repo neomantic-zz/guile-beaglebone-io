@@ -183,13 +183,41 @@ scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate)
   return 1;
 }
 
+static void
+free_scm_callbacks_by_gpio(Gpio *gpio)
+{
+  Gpio *current_gpio;
+  struct scm_callback *prev_scm_callback;
+  unsigned int pin_number = (unsigned int) gpio->pin_number;
+  struct scm_callback *current_scm_callback = scm_gpio_callbacks;
+  prev_scm_callback = current_scm_callback;
+
+  /* This terrible loop deals with the fact that to get the py c library
+     to work, all callback are storted in a global (ugh) linked list of structs. When
+     the gc collects the scm gpio object, it should also clean up the callback structs,
+     The loop finds them, frees them, and removes the from the global.
+
+     The py c library does not do this, possibily leaving the global struct referencing
+     addresses (in ->next) that have been freed.
+  */
+
+  while (current_scm_callback != NULL) {
+    current_gpio = (Gpio *) current_scm_callback->gpio;
+    if ((unsigned int) gpio->pin_number == pin_number) {
+      current_scm_callback = current_scm_callback->next;
+      prev_scm_callback->next = current_scm_callback;
+      free(current_scm_callback);
+    }
+  }
+}
+
 static size_t
 scm_gpio_free(SCM gpio_smob)
 {
   scm_assert_smob_type(gpio_tag, gpio_smob);
   Gpio *gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  free_scm_callbacks_by_gpio(gpio);
   scm_gc_free(gpio, sizeof(Gpio), "gpio");
-  // free all the callbacks???
   return 0;
 }
 
@@ -200,7 +228,6 @@ scm_gpio_mark(SCM gpio_smob)
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   scm_gc_mark(gpio->channel);
-  // mark all the callbacks
   return (SCM) gpio->update_func;
 }
 
