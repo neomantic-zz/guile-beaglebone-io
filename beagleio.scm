@@ -11,7 +11,13 @@
 	    INPUT
 	    OUTPUT
 	    HIGH
-	    LOW))
+	    LOW
+            gpio-callback-append
+            gpio-edge-set!
+            NONE
+            RISING
+            FALLING
+            BOTH))
 
 (dynamic-call "scm_init_beagleio_gpio"
 	      (dynamic-link "guile-beagleio/.libs/libguile-beagleio"))
