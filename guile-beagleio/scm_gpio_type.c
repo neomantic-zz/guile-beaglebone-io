@@ -64,7 +64,6 @@ run_scm_callbacks(unsigned int callback_pin_number)
   }
 }
 
-
 int
 appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime)
 {
@@ -214,7 +213,7 @@ scm_gpio_equalp(SCM gpio_smob, SCM other_gpio_smob)
   gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   other = (Gpio *) SCM_SMOB_DATA (other_gpio_smob);
   if (gpio->pin_number == other->pin_number)
-      return SCM_BOOL_T;
+    return SCM_BOOL_T;
   return SCM_BOOL_F;
 }
 
