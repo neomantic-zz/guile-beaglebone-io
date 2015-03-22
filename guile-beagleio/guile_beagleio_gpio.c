@@ -121,13 +121,14 @@ SCM
 get_value(SCM gpio_smob)
 {
   Gpio *gpio;
-  unsigned int value;
+  unsigned int current_value;
+
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
-  if(gpio_get_value(gpio->pin_number, &value) == -1)
+  if(gpio->getValue(gpio, &current_value) == -1)
     return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
 
-  return scm_new_gpio_value_smob(value);
+  return scm_new_gpio_value_smob(current_value);
 }
 
 void

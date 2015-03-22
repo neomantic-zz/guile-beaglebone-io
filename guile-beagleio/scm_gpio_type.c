@@ -19,6 +19,18 @@ setValue(const void* self, int new_value)
 }
 
 int
+getValue(const void* self, unsigned int *current_value)
+{
+  unsigned int pin_number;
+  Gpio *me;
+
+  me = (Gpio*)self;
+  pin_number = (unsigned int) me->pin_number;
+
+  return gpio_get_value(pin_number, current_value);
+}
+
+int
 getDirection(const void* self, unsigned int *direction)
 {
   unsigned int current_bbio_direction;
@@ -121,6 +133,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->getDirection = &getDirection;
   gpio->setDirection = &setDirection;
   gpio->setValue = &setValue;
+  gpio->getValue = &getValue;
   return smob;
 }
 
