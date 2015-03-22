@@ -56,6 +56,7 @@ int gpio_get_direction(unsigned int gpio, unsigned int *value);
 int gpio_set_value(unsigned int gpio, unsigned int value);
 int gpio_get_value(unsigned int gpio, unsigned int *value);
 int gpio_set_edge(unsigned int gpio, unsigned int edge);
+int gpio_get_edge(unsigned int gpio, unsigned int *value);
 
 int add_edge_detect(unsigned int gpio, unsigned int edge);
 void remove_edge_detect(unsigned int gpio);

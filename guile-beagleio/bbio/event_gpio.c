@@ -319,6 +319,34 @@ int gpio_set_edge(unsigned int gpio, unsigned int edge)
         return 0;
 }
 
+int gpio_get_edge(unsigned int gpio, unsigned int *value)
+{
+  int fd;
+  char filename[40];
+  char ch;
+
+  snprintf(filename, sizeof(filename), "/sys/class/gpio/gpio%d/edge", gpio);
+  if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) < 0)
+    return -1;
+
+  lseek(fd, 0, SEEK_SET);
+  read(fd, &ch, sizeof(ch));
+
+  if (ch == 'r') {
+    *value = RISING;
+  } else if (ch == 'f') {
+    *value = FALLING;
+  } else if (ch == 'b') {
+    *value = BOTH;
+  } else {
+    *value = NONE;
+  }
+
+  close(fd);
+  return 0;
+}
+
+
 unsigned int gpio_lookup(int fd)
 {
     struct fdx *f = fd_list;
