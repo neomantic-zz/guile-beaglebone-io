@@ -23,7 +23,7 @@ scm_gpio_value_print(SCM gpio_value_smob, SCM port, scm_print_state *pstate)
   } else {
     scm_puts("low", port);
   }
-  scm_puts(" >", port);
+  scm_puts(">", port);
   return 1;
 }
 

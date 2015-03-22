@@ -16,7 +16,7 @@ scm_gpio_direction_print(SCM gpio_direction_smob, SCM port, scm_print_state *pst
   } else {
     scm_puts("output", port);
   }
-  scm_puts(" >", port);
+  scm_puts(">", port);
   return 1;
 }
 
