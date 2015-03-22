@@ -7,6 +7,7 @@ typedef struct gpio {
   unsigned int pin_number;
   unsigned int past_bbio_direction;
   int (*direction)(const void* self, unsigned int *direction);
+  int (*setDirection)(const void* self, int new_direction);
   SCM channel;
   SCM update_func;
 } Gpio;

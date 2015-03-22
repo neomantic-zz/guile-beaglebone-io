@@ -157,9 +157,9 @@
     (gpio-value gpio)))
   (gpio-cleanup-all))
 
-(test-assert (number? INPUT))
-(test-assert (number? OUTPUT))
+(test-assert (equal? INPUT INPUT))
 (test-assert (not (equal? INPUT OUTPUT)))
+(test-assert (equal? OUTPUT OUTPUT))
 
 (test-group
  "setting the gpio direction"

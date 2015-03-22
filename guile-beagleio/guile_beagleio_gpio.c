@@ -30,6 +30,9 @@ SCM
 setup_channel(SCM s_channel)
 {
   unsigned int gpio_number;
+  Gpio *gpio;
+  SCM gpio_smob;
+
   get_gpio_number(scm_to_locale_string(s_channel), &gpio_number);
 
   if (!gpio_number)
@@ -38,10 +41,12 @@ setup_channel(SCM s_channel)
   if (gpio_export(gpio_number) != 0 )
     return scm_gpio_throw("unable to export to /sys/class/gpio");
 
-  gpio_set_direction(gpio_number, OUTPUT);
+  gpio_smob = scm_new_gpio_smob(&gpio_number, &s_channel);
+  gpio = (Gpio *)SCM_SMOB_DATA(gpio_smob);
+  gpio->setDirection(gpio, OUTPUT);
   gpio_set_value(gpio_number, LOW);
 
-  return scm_new_gpio_smob(&gpio_number, &s_channel);
+  return gpio_smob;
 }
 
 SCM
@@ -49,22 +54,22 @@ set_direction(SCM gpio_smob, SCM gpio_direction_smob)
 {
   Gpio *gpio;
   GpioDirection *gpio_direction;
+  int success;
+
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_direction_smob(&gpio_direction_smob);
 
   gpio_direction = (GpioDirection *)SCM_SMOB_DATA(gpio_direction_smob);
-
-  if (gpio_direction->bbio_value != INPUT && gpio_direction->bbio_value != OUTPUT)
-    return scm_gpio_throw("only accepts INPUT and OUTPUT");
-
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
 
-  if (gpio_set_direction(gpio->pin_number, gpio_direction->bbio_value) == -1)
-    return scm_gpio_throw("unable to write to /sys/class/gpio");
+  success = gpio->setDirection(gpio, gpio_direction->bbio_value);
+  if (success == 0)
+      return gpio_smob;
 
-  gpio->past_bbio_direction = gpio_direction->bbio_value;
+  if (success != -1)
+      return scm_gpio_throw("only accepts INPUT and OUTPUT");
+  return scm_gpio_throw("unable to write to /sys/class/gpio");
 
-  return gpio_smob;
 }
 
 SCM
@@ -77,7 +82,7 @@ get_direction(SCM gpio_smob)
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
   success = gpio->direction(gpio, &direction);
   if (success == 0)
-    return scm_new_direction_smob(direction);
+    return scm_new_gpio_direction_smob(direction);
 
   if (success != -1)
     return scm_gpio_throw("unable to write /sys/class/gpio/*/direction to reset it");

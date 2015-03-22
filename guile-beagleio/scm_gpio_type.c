@@ -24,6 +24,20 @@ direction(const void* self, unsigned int *direction)
   return 0;
 }
 
+int
+setDirection(const void *self, int new_direction)
+{
+  Gpio *me = (Gpio*)self;
+  if (new_direction != INPUT && new_direction != OUTPUT)
+    return -2;
+
+  if (gpio_set_direction((unsigned int) me->pin_number, new_direction) == -1)
+    return -1;
+
+  me->past_bbio_direction = new_direction;
+
+  return 0;
+}
 
 static int
 scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate)
@@ -90,6 +104,8 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->update_func = SCM_BOOL_F;
   smob = scm_new_smob(gpio_tag, (scm_t_bits) gpio);
   gpio->channel = *s_channel;
+  gpio->direction = &direction;
+  gpio->setDirection = &setDirection;
   return smob;
 }
 
