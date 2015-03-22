@@ -4,6 +4,18 @@
 
 static scm_t_bits gpio_tag;
 
+
+struct scm_callback
+{
+  char channel[32];
+  unsigned int pin_number;
+  SCM expression;
+  unsigned long long lastcall;
+  unsigned int bouncetime;
+  struct scm_callback *next;
+};
+static struct scm_callback *scm_callbacks = NULL;
+
 int
 setEdge(const void* self, int new_edge)
 {
@@ -17,6 +29,76 @@ setEdge(const void* self, int new_edge)
 
   return gpio_set_edge((unsigned int) me->pin_number, new_edge);
 }
+
+static SCM
+run_scm_callbacks(unsigned int pin_number)
+{
+
+  SCM gpio_smob;
+  struct scm_callback *cb = scm_callbacks;
+  struct timeval tv_timenow;
+  unsigned long long timenow;
+
+  while (cb != NULL) {
+    if (cb->pin_number == pin_number) {
+      gettimeofday(&tv_timenow, NULL);
+      timenow = tv_timenow.tv_sec*1E6 + tv_timenow.tv_usec;
+      if (cb->bouncetime == 0 || timenow - cb->lastcall > cb->bouncetime*1000 || cb->lastcall == 0 || cb->lastcall > timenow) {
+
+	// save lastcall before calling func to prevent reentrant bounce
+	cb->lastcall = timenow;
+
+	gpio_smob = scm_new_gpio_smob(pin_number, cb->channel);
+
+	/* TODO - handle get_value errors */
+	return scm_call_2(cp->expression, gpio_smob, get_value(gpio_smob));
+      }
+      cb->lastcall = timenow;
+    }
+    cb = cb->next;
+  }
+}
+
+
+static int
+addEventCallback(const void* self, SCM expression, unsigned int bouncetime) {
+{
+  unsigned int pin_number;
+  Gpio *me;
+  struct scm_callback *new_scm_cb;
+  struct scm_callback *cb = scm_callbacks;
+
+  new_scm_cb = malloc(sizeof(struct scm_callback));
+
+  if (new_scm_cb == 0){
+    return -1;
+  }
+
+  me = (Gpio*)self;
+  pin_number = (unsigned int) me->pin_number;
+
+  new_scm_cb->expression = expression;
+  memset(new_scm_cb->channel, 0, sizeof(new_py_cb->channel));
+  strncpy(new_scm_cb->channel, channel, sizeof(new_py_cb->channel) - 1);
+  new_scm_cb->gpio = gpio;
+  new_scm_cb->lastcall = 0;
+  new_scm_cb->bouncetime = bouncetime;
+  new_scm_cb->next = NULL;
+
+  if (scm_callbacks == NULL) {
+    scm_callbacks = new_scm_cb;
+  } else {
+    // add to end of list
+    while (cb->next != NULL)
+      cb = cb->next;
+    cb->next = new_scm_cb;
+  }
+
+  add_edge_callback(gpio, run_scm_callbacks);
+  return 0;
+}
+
+int
 setValue(const void* self, int new_value)
 {
   unsigned int current_direction;
@@ -97,6 +179,7 @@ scm_gpio_free(SCM gpio_smob)
   scm_assert_smob_type(gpio_tag, gpio_smob);
   Gpio *gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
   scm_gc_free(gpio, sizeof(Gpio), "gpio");
+  // free all the callbacks???
   return 0;
 }
 
@@ -107,6 +190,7 @@ scm_gpio_mark(SCM gpio_smob)
   scm_assert_smob_type(gpio_tag, gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   scm_gc_mark(gpio->channel);
+  // mark all the callbacks
   return (SCM) gpio->update_func;
 }
 
@@ -147,6 +231,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->setValue = &setValue;
   gpio->getValue = &getValue;
   gpio->setEdge = &setEdge;
+  gpio->addEventCallback = &addEventCallback;
   return smob;
 }
 

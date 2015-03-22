@@ -7,6 +7,7 @@
 #include "scm_gpio_setting_type.h"
 #include "scm_gpio_value_type.h"
 #include "scm_gpio_direction_type.h"
+#include "scm_gpio_edge_type.h"
 
 SCM
 scm_gpio_throw(char *message)
@@ -131,6 +132,30 @@ get_value(SCM gpio_smob)
   return scm_new_gpio_value_smob(current_value);
 }
 
+SCM
+set_edge(SCM gpio_smob,  SCM gpio_edge_smob)
+{
+  Gpio *gpio;
+  GpioEdge *gpio_edge;
+  success int;
+
+  scm_assert_gpio_smob_type(&gpio_smob);
+  scm_assert_gpio_edge_smob(&gpio_edge_smob);
+
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  gpio_edge = (GpioEdge *) SCM_SMOB_DATA(gpio_edge_smob);
+
+  success = gpio->setEdge(gpio, gpio_edge_smob->bbio_value);
+
+  if (success == 0)
+    return gpio_smob;
+
+  if (success == -2)
+    return scm_gpio_throw("The gpio export must be set to INPUT");
+  return scm_gpio_throw("unable to write to /sys/class/gpio/*/value");
+}
+
+
 void
 scm_init_beagleio_gpio(void)
 {
@@ -141,10 +166,13 @@ scm_init_beagleio_gpio(void)
   init_gpio_type();
   init_gpio_value_type();
   init_gpio_direction_type();
+  init_gpio_edge_type();
   scm_c_define_gsubr("gpio-setup", 1, 0, 0, setup_channel);
   scm_c_define_gsubr("gpio-cleanup-all", 0, 0, 0, gpio_cleanup);
   scm_c_define_gsubr("gpio-direction-set!", 2, 0, 0, set_direction);
   scm_c_define_gsubr("gpio-direction", 1, 0, 0, get_direction);
+  scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);
+
   scm_c_define_gsubr("gpio-number-lookup", 1, 0, 0, lookup_gpio_number);
   scm_c_define_gsubr("gpio?", 1, 0, 0, scm_gpio_type_p);
   scm_c_define("INPUT", scm_new_gpio_direction_smob(INPUT));
@@ -153,6 +181,11 @@ scm_init_beagleio_gpio(void)
   scm_c_define_gsubr("gpio-value", 1, 0, 0, get_value);
   scm_c_define("HIGH", scm_new_gpio_value_smob(HIGH));
   scm_c_define("LOW", scm_new_gpio_value_smob(LOW));
+
+  scm_c_define("NONE", scm_new_gpio_edge_smob(NONE));
+  scm_c_define("RISING", scm_new_gpio_edge_smob(RISING));
+  scm_c_define("FALLING", scm_new_gpio_edge_smob(FALLING));
+  scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
 
   initialized = 1;
 }

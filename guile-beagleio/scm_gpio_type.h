@@ -11,6 +11,7 @@ typedef struct gpio {
   int (*setValue)(const void* self, int new_value);
   int (*getValue)(const void* self, unsigned int *current_value);
   int (*setEdge)(const void* self, unsigned int new_edge);
+  int (*addEventCallback)(const void* self, SCM procedure, unsigned int bouncetime);
   SCM channel;
   SCM update_func;
 } Gpio;
