@@ -80,7 +80,7 @@ get_direction(SCM gpio_smob)
   int success;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-  success = gpio->direction(gpio, &direction);
+  success = gpio->getDirection(gpio, &direction);
   if (success == 0)
     return scm_new_gpio_direction_smob(direction);
 
@@ -107,7 +107,7 @@ set_value(SCM gpio_smob, SCM gpio_value_smob)
   scm_assert_gpio_value_smob(&gpio_value_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
 
-  success = gpio->direction(gpio, &current_direction);
+  success = gpio->getDirection(gpio, &current_direction);
   if (success != 0) {
     if (success == -1)
       return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
