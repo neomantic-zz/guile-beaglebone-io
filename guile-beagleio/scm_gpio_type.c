@@ -1,20 +1,19 @@
 #include "event_gpio.h"
 #include "guile_beagleio_gpio.h"
 #include "scm_gpio_type.h"
+#include "scm_gpio_value_type.h"
 
 static scm_t_bits gpio_tag;
 
-
 struct scm_callback
 {
-  char channel[32];
-  unsigned int pin_number;
-  SCM expression;
+  SCM procedure;
   unsigned long long lastcall;
   unsigned int bouncetime;
   struct scm_callback *next;
+  struct Gpio *gpio;
 };
-static struct scm_callback *scm_callbacks = NULL;
+static struct scm_callback *scm_gpio_callbacks = NULL;
 
 int
 setEdge(const void* self, int new_edge)
@@ -31,70 +30,70 @@ setEdge(const void* self, int new_edge)
 }
 
 static SCM
-run_scm_callbacks(unsigned int pin_number)
+run_scm_callbacks(unsigned int callback_pin_number)
 {
 
-  SCM gpio_smob;
-  struct scm_callback *cb = scm_callbacks;
+  Gpio *gpio;
+  unsigned int pin_number;
+  struct scm_callback *scm_callback = scm_gpio_callbacks;
   struct timeval tv_timenow;
   unsigned long long timenow;
+  unsigned int gpio_bbio_value;
 
-  while (cb != NULL) {
-    if (cb->pin_number == pin_number) {
+  while (scm_callback != NULL) {
+    gpio = (Gpio *) scm_callback->gpio;
+    pin_number = (unsigned int) gpio->pin_number;
+    if (scm_callback->pin_number == callback_pin_number) {
       gettimeofday(&tv_timenow, NULL);
       timenow = tv_timenow.tv_sec*1E6 + tv_timenow.tv_usec;
-      if (cb->bouncetime == 0 || timenow - cb->lastcall > cb->bouncetime*1000 || cb->lastcall == 0 || cb->lastcall > timenow) {
+      if (scm_callback->bouncetime == 0 ||
+	  timenow - scm_callback->lastcall > scm_callback->bouncetime*1000 ||
+	  scm_callback->lastcall == 0 ||
+	  scm_callback->lastcall > timenow) {
 
 	// save lastcall before calling func to prevent reentrant bounce
-	cb->lastcall = timenow;
+	scm_callback->lastcall = timenow;
 
-	gpio_smob = scm_new_gpio_smob(pin_number, cb->channel);
-
-	/* TODO - handle get_value errors */
-	return scm_call_2(cp->expression, gpio_smob, get_value(gpio_smob));
+	if (gpio->getValue(gpio, gpio_bbio_value) == -1)
+	  return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
+	return scm_call_1(cp->procedure, scm_new_gpio_value_smob(gpio_bbio_value));
       }
-      cb->lastcall = timenow;
+      scm_callback->lastcall = timenow;
     }
-    cb = cb->next;
+    scm_callback = scm_callback->next;
   }
 }
 
 
-static int
-addEventCallback(const void* self, SCM expression, unsigned int bouncetime) {
+int
+addEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
 {
-  unsigned int pin_number;
   Gpio *me;
-  struct scm_callback *new_scm_cb;
-  struct scm_callback *cb = scm_callbacks;
+  struct scm_callback *new_scm_callback;
+  struct scm_callback *current_callback = scm_gpio_callbacks;
 
-  new_scm_cb = malloc(sizeof(struct scm_callback));
+  new_scm_callback = malloc(sizeof(struct scm_callback));
 
-  if (new_scm_cb == 0){
+  if (new_scm_callback == 0){
     return -1;
   }
 
-  me = (Gpio*)self;
-  pin_number = (unsigned int) me->pin_number;
+  me = (Gpio *) self;
+  new_scm_callback->procedure = procedure;
+  new_scm_callback->gpio = me;
+  new_scm_callback->lastcall = 0;
+  new_scm_callback->bouncetime = bouncetime;
+  new_scm_callback->next = NULL;
 
-  new_scm_cb->expression = expression;
-  memset(new_scm_cb->channel, 0, sizeof(new_py_cb->channel));
-  strncpy(new_scm_cb->channel, channel, sizeof(new_py_cb->channel) - 1);
-  new_scm_cb->gpio = gpio;
-  new_scm_cb->lastcall = 0;
-  new_scm_cb->bouncetime = bouncetime;
-  new_scm_cb->next = NULL;
-
-  if (scm_callbacks == NULL) {
-    scm_callbacks = new_scm_cb;
+  if (scm_gpio_callbacks == NULL) {
+    scm_gpio_callbacks = new_scm_callback;
   } else {
-    // add to end of list
-    while (cb->next != NULL)
-      cb = cb->next;
-    cb->next = new_scm_cb;
+    while (current_callback->next != NULL)
+      current_callback = current_callback->next;
+    current_callback->next = new_scm_callback;
   }
 
-  add_edge_callback(gpio, run_scm_callbacks);
+  add_edge_callback((unsigned int) me->pin_number, run_scm_callbacks);
   return 0;
 }
 
