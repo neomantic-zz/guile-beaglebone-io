@@ -84,7 +84,7 @@ appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
   if (!gpio_is_evented((unsigned int) gpio->pin_number))
     return -3;
 
-  if (gpio->getDirection(gpio, &current_direction != 0))
+  if (gpio->getDirection(gpio, &current_direction) != 0)
     return -1;
 
   if (current_direction != INPUT)
