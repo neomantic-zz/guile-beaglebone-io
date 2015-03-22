@@ -66,7 +66,7 @@ run_scm_callbacks(unsigned int callback_pin_number)
 
 
 int
-appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime) {
+appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime)
 {
   Gpio *me;
   struct scm_callback *new_scm_callback;
