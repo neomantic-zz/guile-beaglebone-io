@@ -102,26 +102,19 @@ set_value(SCM gpio_smob, SCM gpio_value_smob)
   Gpio *gpio;
   GpioValue *gpio_value;
   int success;
-  unsigned int current_direction;
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_value_smob(&gpio_value_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-
-  success = gpio->getDirection(gpio, &current_direction);
-  if (success != 0) {
-    if (success == -1)
-      return scm_gpio_throw("unable to read /sys/class/gpio/*/direction");
-    return scm_gpio_throw("unable to write /sys/class/gpio/*/direction to reset it");
-  }
-
-  if(current_direction != OUTPUT)
-    return scm_gpio_throw("The gpio channel has not been setup as output");
-
   gpio_value = (GpioValue *)SCM_SMOB_DATA(gpio_value_smob);
-  if(gpio_set_value(gpio->pin_number, gpio_value->bbio_value) == -1)
-    return scm_gpio_throw("unable to read /sys/class/gpio");
+  success = gpio->setValue(gpio, gpio_value->bbio_value);
 
-  return gpio_smob;
+  if (success == 0)
+    return gpio_smob;
+
+  if (success == -2)
+    return scm_gpio_throw("The gpio channel has not been setup as output");
+  return scm_gpio_throw("unable to read or write to /sys/class/gpio/*/direction");
+
 }
 
 SCM
