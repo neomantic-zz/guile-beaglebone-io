@@ -209,6 +209,7 @@ scm_init_beagleio_gpio(void)
   scm_c_define("RISING", scm_new_gpio_edge_smob(RISING));
   scm_c_define("FALLING", scm_new_gpio_edge_smob(FALLING));
   scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
+  scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);
   scm_c_define_gsubr("gpio-callback-append", 2, 0, 0, append_callback);
 
   initialized = 1;
