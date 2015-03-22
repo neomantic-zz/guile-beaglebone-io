@@ -76,6 +76,7 @@ appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime)
   new_scm_callback = malloc(sizeof(struct scm_callback));
 
   if (new_scm_callback == 0){
+    /* TODO:  handle */
     return -1;
   }
 
