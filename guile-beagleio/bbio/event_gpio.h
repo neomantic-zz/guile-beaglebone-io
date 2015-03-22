@@ -31,10 +31,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#define NO_EDGE      0
-#define RISING_EDGE  1
-#define FALLING_EDGE 2
-#define BOTH_EDGE    3
+/* matches the indexes of event_gpio.c */
+#define NONE 0
+#define RISING 1
+#define FALLING 2
+#define BOTH 3
 
 #define INPUT  0
 #define OUTPUT 1
