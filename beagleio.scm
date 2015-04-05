@@ -1,7 +1,7 @@
 (define-module (beagleio)
   #:use-module ((ice-9 match))
   #:export (gpio-setup
-	    gpio-cleanup-all
+            gpio-close
 	    gpio-direction-set!
 	    gpio-direction
 	    gpio-value-set!

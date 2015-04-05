@@ -49,7 +49,6 @@ SOFTWARE.
 
 int gpio_export(unsigned int gpio);
 int gpio_unexport(unsigned int gpio);
-void exports_cleanup(void);
 int gpio_set_direction(unsigned int gpio, unsigned int in_flag);
 int gpio_get_direction(unsigned int gpio, unsigned int *value);
 int gpio_set_value(unsigned int gpio, unsigned int value);
