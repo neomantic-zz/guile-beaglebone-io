@@ -169,6 +169,15 @@ setDirection(const void *self, int new_direction)
   return 0;
 }
 
+int
+unexport(const void *self)
+{
+  unsigned int pin_number;
+  Gpio *me = (Gpio*)self;
+  pin_number = (unsigned int) me->pin_number;
+  return gpio_unexport(pin_number);
+}
+
 static int
 scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate)
 {
@@ -269,6 +278,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->getValue = &getValue;
   gpio->setEdge = &setEdge;
   gpio->appendEventCallback = &appendEventCallback;
+  gpio->close = &unexport;
   return smob;
 }
 

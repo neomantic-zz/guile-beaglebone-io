@@ -91,13 +91,6 @@ get_direction(SCM gpio_smob)
 }
 
 SCM
-gpio_cleanup(void)
-{
-  event_cleanup();
-  return SCM_UNDEFINED;
-}
-
-SCM
 set_value(SCM gpio_smob, SCM gpio_value_smob)
 {
   Gpio *gpio;
@@ -176,6 +169,17 @@ append_callback(SCM gpio_smob, SCM procedure)
   if (success == -3)
     return scm_gpio_throw("Add event detection using gpio-edge-set first before adding a callback");
 
+SCM
+close_channel(SCM gpio_smob)
+{
+  Gpio *gpio;
+  unsigned int current_value;
+  int result;
+  scm_assert_gpio_smob_type(&gpio_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
+  result = gpio->close(gpio);
+  if (result =! -1)
+    return scm_gpio_throw("unable to write /sys/class/gpio/*/unexport");
   return gpio_smob;
 }
 
@@ -191,7 +195,7 @@ scm_init_beagleio_gpio(void)
   init_gpio_direction_type();
   init_gpio_edge_type();
   scm_c_define_gsubr("gpio-setup", 1, 0, 0, setup_channel);
-  scm_c_define_gsubr("gpio-cleanup-all", 0, 0, 0, gpio_cleanup);
+  scm_c_define_gsubr("gpio-close", 1, 0, 0, close_channel);
   scm_c_define_gsubr("gpio-direction-set!", 2, 0, 0, set_direction);
   scm_c_define_gsubr("gpio-direction", 1, 0, 0, get_direction);
   scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);

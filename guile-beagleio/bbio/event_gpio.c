@@ -77,7 +77,6 @@ int gpio_export(unsigned int gpio)
 {
     int fd, len;
     char str_gpio[10];
-    struct gpio_exp *new_gpio, *g;
 
     if ((fd = open("/sys/class/gpio/export", O_WRONLY)) < 0)
     {
@@ -86,26 +85,6 @@ int gpio_export(unsigned int gpio)
     len = snprintf(str_gpio, sizeof(str_gpio), "%d", gpio);
     write(fd, str_gpio, len);
     close(fd);
-
-    // add to list
-    new_gpio = malloc(sizeof(struct gpio_exp));
-    if (new_gpio == 0)
-        return -1; // out of memory
-
-    new_gpio->gpio = gpio;
-    new_gpio->next = NULL;
-
-    if (exported_gpios == NULL)
-    {
-        // create new list
-        exported_gpios = new_gpio;
-    } else {
-        // add to end of existing list
-        g = exported_gpios;
-        while (g->next != NULL)
-            g = g->next;
-        g->next = new_gpio;
-    }
     return 0;
 }
 
@@ -146,27 +125,6 @@ int fd_lookup(unsigned int gpio)
     return 0;
 }
 
-int add_fd_list(unsigned int gpio, int fd)
-{
-    struct fdx *new_fd;
-
-    new_fd = malloc(sizeof(struct fdx));
-    if (new_fd == 0)
-        return -1;  // out of memory
-
-    new_fd->fd = fd;
-    new_fd->gpio = gpio;
-    new_fd->initial = 1;
-    new_fd->is_evented = 0;
-    if (fd_list == NULL) {
-        new_fd->next = NULL;
-    } else {
-        new_fd->next = fd_list;
-    }
-    fd_list = new_fd;
-    return 0;
-}
-
 int open_value_file(unsigned int gpio)
 {
     int fd;
@@ -176,7 +134,6 @@ int open_value_file(unsigned int gpio)
     snprintf(filename, sizeof(filename), "/sys/class/gpio/gpio%d/value", gpio);
     if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) < 0)
         return -1;
-    add_fd_list(gpio, fd);
     return fd;
 }
 
@@ -184,9 +141,6 @@ int gpio_unexport(unsigned int gpio)
 {
     int fd, len;
     char str_gpio[10];
-    struct gpio_exp *g, *temp, *prev_g = NULL;
-
-    close_value_fd(gpio);
 
     if ((fd = open("/sys/class/gpio/unexport", O_WRONLY)) < 0)
         return -1;
@@ -195,25 +149,7 @@ int gpio_unexport(unsigned int gpio)
     write(fd, str_gpio, len);
     close(fd);
 
-    // remove from list
-    g = exported_gpios;
-    while (g != NULL)
-    {
-        if (g->gpio == gpio)
-        {
-            if (prev_g == NULL)
-                exported_gpios = g->next;
-            else
-                prev_g->next = g->next;
-            temp = g;
-            g = g->next;
-            free(temp);
-        } else {
-            prev_g = g;
-            g = g->next;
-        }
-    }
-        return 0;
+    return 0;
 }
 
 int gpio_set_direction(unsigned int gpio, unsigned int in_flag)
@@ -357,13 +293,6 @@ unsigned int gpio_lookup(int fd)
         f = f->next;
     }
     return 0;
-}
-
-void exports_cleanup(void)
-{
-    // unexport everything
-    while (exported_gpios != NULL)
-        gpio_unexport(exported_gpios->gpio);
 }
 
 int add_edge_callback(unsigned int gpio, void (*func)(unsigned int gpio))
@@ -612,7 +541,6 @@ void event_cleanup(void)
 {
     close(epfd);
     thread_running = 0;
-    exports_cleanup();
 }
 
 int blocking_wait_for_edge(unsigned int gpio, unsigned int edge)

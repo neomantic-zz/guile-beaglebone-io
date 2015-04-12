@@ -111,211 +111,240 @@
 (test-eq 0   (gpio-number-lookup "P9_45"))
 (test-eq 0   (gpio-number-lookup "P9_46"))
 
-
-
-;;(test-error 'gpio-error (gpio-setup "non existing name"))
-
-(define-syntax test-gpio-sysfs-export
+(define-syntax test-gpio-predicate
   (syntax-rules ()
-    ((_ (proc name) ...)
+    ((_ desc (assertion (expression gpio-creator)) ...)
      (test-group
-      "testing gpio-setup export to sysfs"
-      (test-assert
-       (let ((pin (gpio-number-lookup name)))
-	 (apply proc (list name))
-	 (sysfs-exists? pin)
-	  #t)) ...))))
+      desc
+      (assertion
+       (let* ((gpio gpio-creator)
+              (result (expression gpio)))
+         (gpio-close gpio)
+         result)) ...))))
 
-(test-group-with-cleanup
- "returns a gpio connection"
+(test-gpio-predicate
+ "testing gpio-setup returns gpio value"
  (test-assert (gpio? (gpio-setup "P8_3")))
  (test-assert (gpio? (gpio-setup "P8_4")))
  (test-assert (gpio? (gpio-setup "P8_5")))
  (test-assert (gpio? (gpio-setup "P8_6")))
  (test-assert (gpio? (gpio-setup "P9_14")))
- (test-assert (gpio? (gpio-setup "P9_16")))
- (test-gpio-sysfs-export
-  (gpio-setup "P8_3")
-  (gpio-setup "P8_4")
-  (gpio-setup "P8_5")
-  (gpio-setup "P8_6")
-  (gpio-setup "P9_14")
-  (gpio-setup "P9_16"))
- (gpio-cleanup-all))
+ (test-assert (gpio? (gpio-setup "P9_16"))))
 
-(test-group-with-cleanup
+(define-syntax test-gpio-sysfs-export
+  (syntax-rules ()
+    ((_ desc (proc name) ...)
+     (test-group
+      desc
+      (test-assert
+       (let* ((pin (gpio-number-lookup name))
+              (gpio (apply proc (list name)))
+              (exported (sysfs-exists? pin)))
+         (gpio-close gpio)
+         exported)) ...))))
+
+(test-gpio-sysfs-export
+ "testing gpio-setup export to sysfs"
+ (gpio-setup "P8_3")
+ (gpio-setup "P8_4")
+ (gpio-setup "P8_5")
+ (gpio-setup "P8_6")
+ (gpio-setup "P9_14")
+ (gpio-setup "P9_16"))
+
+(test-group
  "default setup"
  (test-equal
   "it always sets the direction to OUTPUT"
   OUTPUT
-  (let ((gpio (gpio-setup "P8_3")))
-    (gpio-direction gpio)))
+  (let* ((gpio (gpio-setup "P8_3"))
+         (direction (gpio-direction gpio)))
+    (gpio-close gpio)
+    direction))
  (test-equal
   "it always sets the value to LOW"
   LOW
-  (let ((gpio (gpio-setup "P8_3")))
-    (gpio-value gpio)))
-  (gpio-cleanup-all))
+  (let* ((gpio (gpio-setup "P8_3"))
+         (value (gpio-value gpio)))
+    (gpio-close gpio)
+    value)))
 
 (test-assert (equal? INPUT INPUT))
 (test-assert (not (equal? INPUT OUTPUT)))
 (test-assert (equal? OUTPUT OUTPUT))
 
+(define (call-with-gpio gpio-name receiver)
+  (let ((gpio '()))
+    (dynamic-wind
+      (lambda ()
+        (set! gpio (gpio-setup gpio-name)))
+      (lambda () (receiver gpio))
+      (lambda ()
+        (gpio-close gpio)))))
+
 (test-group
  "setting the gpio direction"
- (test-group-with-cleanup
-  (test-equal
+ (test-equal
    "in"
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio-direction-set! gpio INPUT)
-     (call-with-input-file
-	 (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/direction")
-       (lambda (port)
-	 (read-line port)))))
-  (gpio-cleanup-all))
- (test-group-with-cleanup
-  (test-equal
-   "out"
-   (let ((gpio (gpio-setup "P8_3")))
+   (call-with-gpio
+    "P8_3"
+    (lambda (gpio)
+      (gpio-direction-set! gpio INPUT)
+      (call-with-input-file
+          (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/direction")
+        (lambda (port)
+          (read-line port))))))
+ (test-equal
+  "out"
+  (call-with-gpio
+   "P8_3"
+   (lambda (gpio)
      (gpio-direction-set! gpio OUTPUT)
      (call-with-input-file
-	 (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/direction")
+         (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/direction")
        (lambda (port)
-	 (read-line port)))))
-  (gpio-cleanup-all))
- (test-group-with-cleanup
-  "returns a gpio object"
-  (test-assert
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio? (gpio-direction-set! gpio OUTPUT))))
-  (test-assert
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio? (gpio-direction-set! gpio INPUT))))
-  (gpio-cleanup-all)))
+         (read-line port))))))
+ (test-assert
+  (gpio?
+   (call-with-gpio
+    "P8_3"
+    (lambda (gpio)
+      (gpio-direction-set! gpio OUTPUT)))))
+ (test-assert
+  (gpio?
+   (call-with-gpio
+    "P8_3"
+    (lambda (gpio)
+      (gpio-direction-set! gpio INPUT))))))
 
-(test-group-with-cleanup
+(test-group
  "returns the correct boolean when testing if value is a gpio connection"
  (test-assert
-  (not (gpio? 199)))
- (test-assert
-  (gpio? (gpio-setup "P8_3")))
- (gpio-cleanup-all))
+  (not (gpio? 199))))
 
-(test-group-with-cleanup
+(test-group
  "getting the gpio direction"
  (test-equal
   OUTPUT
-  (let pio((gpio (gpio-setup "P8_3")))
-    (gpio-direction-set! gpio OUTPUT)
-    (gpio-direction gpio)))
+  (call-with-gpio
+   "P8_3"
+   (lambda (gpio)
+     (gpio-direction-set! gpio OUTPUT)
+     (gpio-direction gpio))))
  (test-equal
   INPUT
+  (call-with-gpio
+   "P8_3"
+   (lambda (gpio)
+     (gpio-direction-set! gpio INPUT)
+     (gpio-direction gpio)))
   (let ((gpio (gpio-setup "P8_3")))
     (gpio-direction-set! gpio INPUT)
-    (gpio-direction gpio)))
- (gpio-cleanup-all))
-
-(test-group
- "cleanup exports"
- (test-assert
-  (let* ((names '("P8_3" "P9_16"))
-	 (pins (map gpio-number-lookup names)))
-    (map (lambda (name) (gpio-setup name)) names)
-    (gpio-cleanup-all)
-    (not (member #t (map sysfs-exists? pins))))))
+    (gpio-direction gpio))))
 
 
 (test-group
  "setting the value of a gpio"
- (test-group-with-cleanup
+ (test-group
   "returns a gpio connection"
   (test-assert
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio? (gpio-value-set! gpio LOW))))
+   (gpio?
+    (call-with-gpio "P8_3" (lambda (gpio) (gpio-value-set! gpio LOW)))))
   (test-assert
-   (let ((gpio (gpio-setup "P9_16")))
-     (gpio? (gpio-value-set! gpio HIGH))))
-  (gpio-cleanup-all))
- (test-group-with-cleanup
+   (gpio?
+    (call-with-gpio "P9_16" (lambda (gpio) (gpio-value-set! gpio LOW))))))
+ (test-group
   "setting the gpio to ouput and value to LOW"
   (test-equal
    "0"
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio-direction-set! gpio OUTPUT)
-     (gpio-value-set! gpio LOW)
-     (call-with-input-file
-	 (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
-       (lambda (port)
-	 (read-line port)))))
-  (gpio-cleanup-all))
+   (call-with-gpio
+    "P8_3"
+    (lambda (gpio)
+      (gpio-direction-set! gpio OUTPUT)
+      (gpio-value-set! gpio LOW)
+      (call-with-input-file
+          (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
+        (lambda (port)
+          (read-line port)))))))
  (test-group-with-cleanup
   "setting the gpio setup as input"
   (test-error
    "raises error when setting to HIGH"
-   (let ((gpio (gpio-setup "P8_3")))
-     (gpio-direction-set! gpio INPUT)
-     (gpio-value-set! gpio HIGH)))
+   (call-with-gpio
+    "P8_3"
+    (lambda (gpio)
+      (gpio-direction-set! gpio INPUT)
+      (gpio-value-set! gpio HIGH))))
   (test-error
    "raises error when setting to LOW"
-   (let ((gpio (gpio-setup "P8_4")))
-     (gpio-direction-set! gpio INPUT)
-     (gpio-value-set! gpio LOW)))
-  (gpio-cleanup-all)))
+   (call-with-gpio
+    "P8_4"
+    (lambda (gpio)
+      (gpio-direction-set! gpio INPUT)
+      (gpio-value-set! gpio LOW))))))
 
-
-(test-group-with-cleanup
+(test-group
  "returns the correct value for a gpio"
-  (test-equal
+ (test-equal
   HIGH
-  (let ((gpio (gpio-setup "P9_14")))
-    (gpio-direction-set! gpio OUTPUT)
-    (gpio-value-set! gpio HIGH)
-    (gpio-value gpio)))
- (gpio-cleanup-all)
+  (call-with-gpio
+   "P9_14"
+   (lambda (gpio)
+     (gpio-direction-set! gpio OUTPUT)
+     (gpio-value-set! gpio HIGH)
+     (gpio-value gpio))))
  (test-equal
   LOW
-  (let ((gpio (gpio-setup "P9_14")))
-    (gpio-direction-set! gpio OUTPUT)
-    (gpio-value-set! gpio LOW)
-    (gpio-value gpio))))
+  (call-with-gpio
+    "P9_14"
+    (lambda (gpio)
+     (gpio-direction-set! gpio OUTPUT)
+     (gpio-value-set! gpio LOW)
+     (gpio-value gpio)))))
 
-(test-group-with-cleanup
+(test-group
  "returns correct boolean when comparing gpios"
  (test-assert
-  (let ((gpio1 (gpio-setup "P8_3"))
-	(gpio2 (gpio-setup "P8_4")))
-    (not (equal? gpio1 gpio2))))
+  (let* ((gpio1 (gpio-setup "P8_3"))
+	(gpio2 (gpio-setup "P8_4"))
+        (result (not (equal? gpio1 gpio2))))
+    (gpio-close gpio1)
+    (gpio-close gpio2)
+    result))
  (test-assert
-  (let ((gpio (gpio-setup "P9_14")))
-    (equal? gpio gpio))))
+  (let* ((gpio (gpio-setup "P9_14"))
+        (result (equal? gpio gpio)))
+    (gpio-close gpio)
+    result)))
 
-(test-group-with-cleanup
+(test-group
  "mutability of gpio value"
- (test-assert
+ (test-equal
   "changing the value to high on the sysfs when it was set as LOW"
-  (let ((gpio (gpio-setup "P8_3")))
-    (gpio-direction-set! gpio OUTPUT)
-    (gpio-value-set! gpio LOW)
-    (call-with-output-file
-	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
-      (lambda (port)
-	(write-line "1" port)))
-    (test-equal
-     HIGH
+  HIGH
+  (call-with-gpio
+   "P8_3"
+   (lambda (gpio)
+     (gpio-direction-set! gpio OUTPUT)
+     (gpio-value-set! gpio LOW)
+     (call-with-output-file
+         (string-append (gpio-sysfs-path (gpio-number-lookup "P8_3")) "/value")
+       (lambda (port)
+         (write-line "1" port)))
      (gpio-value gpio))))
- (test-assert
+ (test-equal
   "changing the value to low on the sysfs when it was set as HIGH"
-  (let ((gpio (gpio-setup "P8_4")))
-    (gpio-direction-set! gpio OUTPUT)
-    (gpio-value-set! gpio HIGH)
-    (call-with-output-file
-	(string-append (gpio-sysfs-path (gpio-number-lookup "P8_4")) "/value")
-      (lambda (port)
-	(write-line "0" port)))
-    (test-equal
-     LOW
-     (gpio-value gpio))))
- (gpio-cleanup-all))
+  LOW
+  (call-with-gpio
+   "P8_4"
+   (lambda (gpio)
+     (gpio-direction-set! gpio OUTPUT)
+     (gpio-value-set! gpio HIGH)
+     (call-with-output-file
+         (string-append (gpio-sysfs-path (gpio-number-lookup "P8_4")) "/value")
+       (lambda (port)
+         (write-line "0" port)))
+     (gpio-value gpio)))))
 
 (test-group
  "equality of gpio value"
@@ -325,18 +354,20 @@
   (equal? LOW LOW))
  (test-assert
   (not (equal? LOW HIGH)))
- (test-group-with-cleanup
+ (test-group
   "checking equality of returned values"
-  (let ((gpio1 (gpio-setup "P8_3"))
-	(gpio2 (gpio-setup "P8_4")))
-    (gpio-direction-set! gpio1 OUTPUT)
-    (gpio-direction-set! gpio2 OUTPUT)
-    (gpio-value-set! gpio1 LOW)
-    (gpio-value-set! gpio2 LOW)
-    (test-assert
-     (equal? (gpio-value gpio1) (gpio-value gpio2))))
-  (gpio-cleanup-all)
-  (test-group-with-cleanup
+  (test-assert
+   (let ((gpio1 (gpio-setup "P8_3"))
+         (gpio2 (gpio-setup "P8_4")))
+     (gpio-direction-set! gpio1 OUTPUT)
+     (gpio-direction-set! gpio2 OUTPUT)
+     (gpio-value-set! gpio1 LOW)
+     (gpio-value-set! gpio2 LOW)
+     (let ((result (equal? (gpio-value gpio1) (gpio-value gpio2))))
+       (gpio-close gpio1)
+       (gpio-close gpio2)
+       result)))
+  (test-assert
    "checking equality of returned values when one is changed"
    (let ((gpio1 (gpio-setup "P8_3"))
 	 (gpio2 (gpio-setup "P8_4")))
@@ -345,8 +376,9 @@
      (gpio-value-set! gpio1 LOW)
      (gpio-value-set! gpio2 LOW)
      (gpio-value-set! gpio1 HIGH)
-     (test-assert
-      (not (equal? (gpio-value gpio1) (gpio-value gpio2)))))
-   (gpio-cleanup-all))))
+     (let ((result (equal? (gpio-value gpio1) (gpio-value gpio2))))
+       (gpio-close gpio1)
+       (gpio-close gpio2)
+       (not result))))))
 
 (test-end "gpio")
