@@ -168,6 +168,7 @@ append_callback(SCM gpio_smob, SCM procedure)
 
   if (success == -3)
     return scm_gpio_throw("Add event detection using gpio-edge-set first before adding a callback");
+}
 
 SCM
 close_channel(SCM gpio_smob)
