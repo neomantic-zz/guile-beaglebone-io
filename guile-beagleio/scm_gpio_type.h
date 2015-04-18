@@ -3,6 +3,14 @@
 
 #include <libguile.h>
 
+struct scm_callback
+{
+  SCM procedure;
+  unsigned long long lastcall;
+  unsigned int bouncetime;
+  struct scm_callback *next;
+};
+
 typedef struct gpio {
   unsigned int pin_number;
   unsigned int past_bbio_direction;
@@ -11,10 +19,13 @@ typedef struct gpio {
   int (*setValue)(const void* self, int new_value);
   int (*getValue)(const void* self, unsigned int *current_value);
   int (*setEdge)(const void* self, unsigned int new_edge);
-  int (*appendEventCallback)(const void* self, SCM procedure, unsigned int bouncetime);
+  int (*getEdge)(const void* self, unsigned int *edge);
+  int (*appendEventCallback)(const void* self, SCM procedure);
+  void (*clearEventCallbacks)(const void* self);
   int (*close)(const void* self);
   SCM channel;
   SCM update_func;
+  struct scm_callback *scm_gpio_callbacks;
 } Gpio;
 
 void scm_assert_gpio_smob_type(SCM *smob);

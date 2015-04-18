@@ -6,7 +6,7 @@ libguile_beagleio_la_SOURCES = 	guile_beagleio_gpio.h guile_beagleio_gpio.c \
 			scm_gpio_setting_type.h \
 			scm_gpio_value_type.h scm_gpio_value_type.c \
 			scm_gpio_direction_type.h scm_gpio_direction_type.c \
-			scm_gpio_type.h scm_gpio_type.c
+			scm_gpio_type.h scm_gpio_type.c \
 			scm_gpio_edge_type.h scm_gpio_edge_type.c
 libguile_beagleio_la_CFLAGS = $(AM_CFLAGS) @guile_CFLAGS@ -I$(SUBDIRS)
 libguile_beagleio_la_LIBADD = -L$(SUBDIRS) @guile_LIBS@ -l$(BBIO_LIB)

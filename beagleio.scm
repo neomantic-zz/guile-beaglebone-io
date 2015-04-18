@@ -17,7 +17,8 @@
             NONE
             RISING
             FALLING
-            BOTH))
+            BOTH
+            gpio-event-wait!))
 
 (dynamic-call "scm_init_beagleio_gpio"
 	      (dynamic-link "guile-beagleio/.libs/libguile-beagleio"))

@@ -1,6 +1,7 @@
 #include "scm_gpio_edge_type.h"
 #include <libguile.h>
 #include "scm_gpio_setting_type.h"
+#include "event_gpio.h"
 
 static scm_t_bits gpio_edge_tag;
 
@@ -16,12 +17,22 @@ scm_gpio_edge_print(SCM gpio_edge_smob, SCM port, scm_print_state *pstate)
   GpioEdge *gpio_edge;
   scm_assert_gpio_edge_smob(&gpio_edge_smob);
   gpio_edge = (GpioEdge*)SCM_SMOB_DATA(gpio_edge_smob);
-  scm_puts("#<gpio-edge level: ", port);
-  if (gpio_edge->bbio_value == HIGH) {
-    scm_puts("high", port);
-  } else {
-    scm_puts("low", port);
+  scm_puts("#<gpio-edge edge: ", port);
+
+  switch (gpio_edge->bbio_value) {
+  case BOTH:
+    scm_puts("both", port);
+    break;
+  case RISING:
+    scm_puts("rising", port);
+    break;
+  case FALLING:
+    scm_puts("falling", port);
+    break;
+  default:
+    scm_puts("none", port);
   }
+
   scm_puts(">", port);
   return 1;
 }

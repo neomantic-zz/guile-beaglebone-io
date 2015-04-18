@@ -122,6 +122,7 @@
          (gpio-close gpio)
          result)) ...))))
 
+
 (test-gpio-predicate
  "testing gpio-setup returns gpio value"
  (test-assert (gpio? (gpio-setup "P8_3")))
@@ -380,5 +381,100 @@
        (gpio-close gpio1)
        (gpio-close gpio2)
        (not result))))))
+
+(test-group
+ "edge values"
+ (test-assert
+  (not (equal? NONE BOTH)))
+ (test-assert
+  (not (equal? NONE FALLING)))
+ (test-assert
+  (not (equal? NONE RISING)))
+ (test-assert
+  (not (equal? BOTH RISING)))
+ (test-assert
+  (not (equal? BOTH FALLING)))
+ (test-assert
+  (not (equal? FALLING RISING))))
+
+(test-group
+ "edge-setting"
+ (test-group
+   "raising an error when edge set on output gpio"
+   (test-error
+    "FALLING edge"
+    (call-with-gpio
+     "P8_3" (lambda (gpio)
+              (gpio-direction-set! gpio OUTPUT)
+              (gpio-edge-set! gpio RISING))))
+   (test-error
+    "FALLING edge"
+    (call-with-gpio
+     "P8_3" (lambda (gpio)
+              (gpio-direction-set! gpio OUTPUT)
+              (gpio-edge-set! gpio FALLING))))
+   (test-error
+    "NONE edge"
+    (call-with-gpio
+     "P8_3" (lambda (gpio)
+              (gpio-direction-set! gpio OUTPUT)
+              (gpio-edge-set! gpio NONE))))
+   (test-error
+    "BOTH edge"
+    (call-with-gpio
+     "P8_3" (lambda (gpio)
+              (gpio-direction-set! gpio OUTPUT)
+              (gpio-edge-set! gpio BOTH)))))
+ (test-group ""
+  "appending a callback"
+  (test-error
+   "raises an error when the append an callback and direction when no edge was added"
+   (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio INPUT)
+             (gpio-callback-append gpio (lambda (value) #t)))))
+  (test-error
+   "raises an error when the append an callback and direction is OUTPUT"
+   (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio OUTPUT)
+             (gpio-callback-append gpio (lambda (value) #t)))))
+  (test-error
+   "raises an error when appending a callback but the edge was set to none "
+   (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio OUTPUT)
+             (gpio-edge-set! gpio NONE)
+             (gpio-callback-append gpio (lambda (value) #t)))))
+  (test-assert
+   "returns the gpio on successful append when edge set to FALLING"
+   (gpio? (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio INPUT)
+             (gpio-edge-set! gpio BOTH)
+             (gpio-callback-append gpio (lambda (value) #t))))))
+  (test-assert
+   "returns the gpio on successful append when edge set to RISING"
+   (gpio? (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio INPUT)
+             (gpio-edge-set! gpio BOTH)
+             (gpio-callback-append gpio (lambda (value) #t))))))
+  (test-assert
+   "returns the gpio on successful append when edge set to BOTH"
+   (gpio? (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio INPUT)
+             (gpio-edge-set! gpio BOTH)
+             (gpio-callback-append gpio (lambda (value) #t))))))
+  (test-assert
+   "returns the gpio when multiple callbacks have been appended"
+   (call-with-gpio
+    "P8_3" (lambda (gpio)
+             (gpio-direction-set! gpio INPUT)
+             (gpio-edge-set! gpio BOTH)
+             (gpio-callback-append
+              (gpio-callback-append gpio (lambda (value) #t))
+              (lambda (value) #f)))))))
 
 (test-end "gpio")

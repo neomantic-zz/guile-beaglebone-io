@@ -460,31 +460,69 @@ int gpio_event_remove(unsigned int gpio)
     return 0;
 }
 
+int detect_edge(unsigned int gpio, unsigned int *value)
+{
+  int fd;
+  char filename[40];
+  struct epoll_event ev;
+  char *buf;
+  int epfd, n, i;
+
+  snprintf(filename, sizeof(filename), "/sys/class/gpio/gpio%d/value", gpio);
+  if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) < 0)
+    return -1;
+
+  // create epfd if not already open
+  /* FIXME:  epfd is global*/
+  if ((epfd == -1) && ((epfd = epoll_create(1)) == -1))
+    return 2;
+
+  // add to epoll fd
+  ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
+  ev.data.fd = fd;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    return 2;
+
+  // epoll for event
+  for (i = 0; i<2; i++) // first time triggers with current state, so ignore
+    if ((n = epoll_wait(epfd, &ev, 1, -1)) == -1)
+      {
+	return 5;
+      }
+
+  if (n > 0)
+    {
+      lseek(ev.data.fd, 0, SEEK_SET);
+      if (read(ev.data.fd, buf, sizeof(char)) != 1)
+        {
+	  return 6;
+        }
+      if (ev.data.fd != fd)
+        {
+	  return 7;
+        }
+    }
+
+  close(epfd);
+
+  if (strcmp(buf, "0") == 0)
+    return LOW;
+  return HIGH;
+}
+
 int add_edge_detect(unsigned int gpio, unsigned int edge)
 // return values:
 // 0 - Success
 // 1 - Edge detection already added
 // 2 - Other error
 {
-    int fd = fd_lookup(gpio);
+    int fd;
     pthread_t threads;
     struct epoll_event ev;
     long t = 0;
 
-    // check to see if this gpio has been added already
-    if (gpio_event_add(gpio) != 0)
-        return 1;
-
-    // export /sys/class/gpio interface
-    gpio_export(gpio);
-    gpio_set_direction(gpio, 0); // 0=input
-    gpio_set_edge(gpio, edge);
-
-    if (!fd)
-    {
-        if ((fd = open_value_file(gpio)) == -1)
-            return 2;
-    }
+    if ((fd = open_value_file(gpio)) == -1)
+      return 2;
 
     // create epfd if not already open
     if ((epfd == -1) && ((epfd = epoll_create(1)) == -1))
@@ -518,7 +556,7 @@ void remove_edge_detect(unsigned int gpio)
     epoll_ctl(epfd, EPOLL_CTL_DEL, fd, &ev);
 
     // set edge to none
-    gpio_set_edge(gpio, NO_EDGE);
+    gpio_set_edge(gpio, NONE);
 
     // unexport gpio
     gpio_event_remove(gpio);

@@ -5,18 +5,8 @@
 
 static scm_t_bits gpio_tag;
 
-struct scm_callback
-{
-  SCM procedure;
-  unsigned long long lastcall;
-  unsigned int bouncetime;
-  struct scm_callback *next;
-  struct Gpio *gpio;
-};
-static struct scm_callback *scm_gpio_callbacks = NULL;
-
 int
-setEdge(const void* self, int new_edge)
+setEdge(const void* self, unsigned int new_edge)
 {
   Gpio *me;
   unsigned int current_direction;
@@ -26,51 +16,49 @@ setEdge(const void* self, int new_edge)
       current_direction != INPUT)
     return -2;
 
+  if (new_edge == NONE)
+    me->clearEventCallbacks(me);
+
   return gpio_set_edge((unsigned int) me->pin_number, new_edge);
 }
 
-static SCM
-run_scm_callbacks(unsigned int callback_pin_number)
+int
+getEdge(const void* self, unsigned int *edge)
 {
+  Gpio *me;
+  unsigned int current_direction;
 
-  Gpio *gpio;
-  unsigned int pin_number;
-  struct scm_callback *scm_callback = scm_gpio_callbacks;
-  struct timeval tv_timenow;
-  unsigned long long timenow;
-  unsigned int gpio_bbio_value;
+  me = (Gpio*)self;
+  if (me->getDirection(me, &current_direction) == 0 &&
+      current_direction != INPUT)
+    return -2;
 
-  while (scm_callback != NULL) {
-    gpio = (Gpio *) scm_callback->gpio;
-    pin_number = (unsigned int) gpio->pin_number;
-    if (scm_callback->pin_number == callback_pin_number) {
-      gettimeofday(&tv_timenow, NULL);
-      timenow = tv_timenow.tv_sec*1E6 + tv_timenow.tv_usec;
-      if (scm_callback->bouncetime == 0 ||
-	  timenow - scm_callback->lastcall > scm_callback->bouncetime*1000 ||
-	  scm_callback->lastcall == 0 ||
-	  scm_callback->lastcall > timenow) {
+  return gpio_get_edge((unsigned int) me->pin_number, edge);
+}
 
-	// save lastcall before calling func to prevent reentrant bounce
-	scm_callback->lastcall = timenow;
+void
+clearEventCallbacks(const void* self)
+{
+  Gpio *me = (Gpio*) self;
+  struct scm_callback *next_scm_callback;
+  struct scm_callback *current_scm_callback = (struct scm_callback *) me->scm_gpio_callbacks;
+  next_scm_callback = current_scm_callback;
 
-	if (gpio->getValue(gpio, gpio_bbio_value) == -1)
-	  return scm_gpio_throw("unable to read /sys/class/gpio/*/value");
-	return scm_call_1(cp->procedure, scm_new_gpio_value_smob(gpio_bbio_value));
-      }
-      scm_callback->lastcall = timenow;
-    }
-    scm_callback = scm_callback->next;
+  while (next_scm_callback != NULL) {
+    next_scm_callback = current_scm_callback->next;
+    free(current_scm_callback);
   }
+  me->scm_gpio_callbacks == NULL;
 }
 
 int
-appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime)
+appendEventCallback(const void* self, SCM procedure)
 {
   Gpio *me;
   struct scm_callback *new_scm_callback;
-  struct scm_callback *current_callback = scm_gpio_callbacks;
+  struct scm_callback *current_scm_callback;
   unsigned int current_direction;
+  unsigned int current_edge;
 
   new_scm_callback = malloc(sizeof(struct scm_callback));
 
@@ -81,30 +69,31 @@ appendEventCallback(const void* self, SCM procedure, unsigned int bouncetime)
 
   me = (Gpio *) self;
 
-  if (!gpio_is_evented((unsigned int) gpio->pin_number))
-    return -3;
-
-  if (gpio->getDirection(gpio, &current_direction) != 0)
+  if (me->getDirection(me, &current_direction) != 0)
     return -1;
 
   if (current_direction != INPUT)
     return -2;
 
+  if (gpio_get_edge((unsigned int) me->pin_number, &current_edge) != 0)
+    return -1;
+
+  if (current_edge == NONE)
+    return -2;
+
   new_scm_callback->procedure = procedure;
-  new_scm_callback->gpio = me;
   new_scm_callback->lastcall = 0;
-  new_scm_callback->bouncetime = bouncetime;
   new_scm_callback->next = NULL;
 
-  if (scm_gpio_callbacks == NULL) {
-    scm_gpio_callbacks = new_scm_callback;
+  if (me->scm_gpio_callbacks == NULL) {
+    me->scm_gpio_callbacks = new_scm_callback;
   } else {
-    while (current_callback->next != NULL)
-      current_callback = current_callback->next;
-    current_callback->next = new_scm_callback;
+    current_scm_callback = me->scm_gpio_callbacks;
+    while (current_scm_callback->next != NULL)
+      current_scm_callback = current_scm_callback->next;
+    current_scm_callback->next = new_scm_callback;
   }
 
-  add_edge_callback((unsigned int) me->pin_number, run_scm_callbacks);
   return 0;
 }
 
@@ -164,6 +153,11 @@ setDirection(const void *self, int new_direction)
   if (gpio_set_direction((unsigned int) me->pin_number, new_direction) == -1)
     return -1;
 
+  if (me->past_bbio_direction == INPUT && new_direction == OUTPUT) {
+    me->clearEventCallbacks(me);
+    me->setEdge(me, NONE);
+  }
+
   me->past_bbio_direction = new_direction;
 
   return 0;
@@ -192,40 +186,12 @@ scm_gpio_print(SCM gpio_smob, SCM port, scm_print_state *pstate)
   return 1;
 }
 
-static void
-free_scm_callbacks_by_gpio(Gpio *gpio)
-{
-  Gpio *current_gpio;
-  struct scm_callback *prev_scm_callback;
-  unsigned int pin_number = (unsigned int) gpio->pin_number;
-  struct scm_callback *current_scm_callback = scm_gpio_callbacks;
-  prev_scm_callback = current_scm_callback;
-
-  /* This terrible loop deals with the fact that to get the py c library
-     to work, all callback are storted in a global (ugh) linked list of structs. When
-     the gc collects the scm gpio object, it should also clean up the callback structs,
-     The loop finds them, frees them, and removes the from the global.
-
-     The py c library does not do this, possibily leaving the global struct referencing
-     addresses (in ->next) that have been freed.
-  */
-
-  while (current_scm_callback != NULL) {
-    current_gpio = (Gpio *) current_scm_callback->gpio;
-    if ((unsigned int) gpio->pin_number == pin_number) {
-      current_scm_callback = current_scm_callback->next;
-      prev_scm_callback->next = current_scm_callback;
-      free(current_scm_callback);
-    }
-  }
-}
-
 static size_t
 scm_gpio_free(SCM gpio_smob)
 {
   scm_assert_smob_type(gpio_tag, gpio_smob);
   Gpio *gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-  free_scm_callbacks_by_gpio(gpio);
+  gpio->clearEventCallbacks(gpio);
   scm_gc_free(gpio, sizeof(Gpio), "gpio");
   return 0;
 }
@@ -277,8 +243,11 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->setValue = &setValue;
   gpio->getValue = &getValue;
   gpio->setEdge = &setEdge;
+  gpio->getEdge = &getEdge;
   gpio->appendEventCallback = &appendEventCallback;
   gpio->close = &unexport;
+  gpio->scm_gpio_callbacks = NULL;
+  gpio->clearEventCallbacks = &clearEventCallbacks;
   return smob;
 }
 

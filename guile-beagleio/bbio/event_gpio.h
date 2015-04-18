@@ -68,4 +68,6 @@ int event_initialise(void);
 void event_cleanup(void);
 int blocking_wait_for_edge(unsigned int gpio, unsigned int edge);
 
+int detect_edge(unsigned int gpio, unsigned int *value);
+
 #endif

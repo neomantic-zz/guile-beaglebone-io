@@ -130,7 +130,7 @@ set_edge(SCM gpio_smob,  SCM gpio_edge_smob)
 {
   Gpio *gpio;
   GpioEdge *gpio_edge;
-  success int;
+  int success;
 
   scm_assert_gpio_smob_type(&gpio_smob);
   scm_assert_gpio_edge_smob(&gpio_edge_smob);
@@ -138,7 +138,7 @@ set_edge(SCM gpio_smob,  SCM gpio_edge_smob)
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
   gpio_edge = (GpioEdge *) SCM_SMOB_DATA(gpio_edge_smob);
 
-  success = gpio->setEdge(gpio, gpio_edge_smob->bbio_value);
+  success = gpio->setEdge(gpio, gpio_edge->bbio_value);
 
   if (success == 0)
     return gpio_smob;
@@ -164,22 +164,81 @@ append_callback(SCM gpio_smob, SCM procedure)
       return scm_gpio_throw("unable to read to /sys/class/gpio/*/direction");
 
   if (success == -2 )
-    return scm_gpio_throw("The gpio export must be set to INPUT");
+    return scm_gpio_throw("The gpio export must be set to INPUT for edge detection");
 
   if (success == -3)
     return scm_gpio_throw("Add event detection using gpio-edge-set first before adding a callback");
+
+  return gpio_smob;
+}
+
+static SCM
+detecting(void *data)
+{
+  Gpio *gpio;
+  unsigned int value;
+  gpio = (Gpio*)data;
+  detect_edge((unsigned int) gpio->pin_number, &value);
+  if (value == HIGH)
+    return scm_new_gpio_value_smob(HIGH);
+  return scm_new_gpio_value_smob(LOW);
+}
+
+static SCM
+catch_handler(void *data, SCM key, SCM args)
+{
+  return SCM_BOOL_F;
+}
+
+SCM
+detect_event(SCM gpio_smob)
+{
+  Gpio *gpio;
+  scm_assert_gpio_smob_type(&gpio_smob);
+  gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
+  unsigned int current_direction;
+  unsigned int edge, value;
+  SCM gpio_value_smob;
+  struct scm_callback *current_scm_callback;
+  SCM return_value = SCM_BOOL_F;
+
+  if (gpio->getDirection(gpio, &current_direction) == 0 &&
+      current_direction != INPUT)
+    return scm_gpio_throw("The direction was not set to input");
+
+  if ((gpio->getEdge(gpio, &edge) == 0) &&
+      (edge != RISING || edge != FALLING || edge != BOTH))
+    return scm_gpio_throw("No edge was set");
+
+  if (gpio->scm_gpio_callbacks == NULL)
+    return scm_gpio_throw("No callbacks have been registered");
+
+  detect_edge((unsigned int) gpio->pin_number, &value);
+
+  if (value == HIGH)
+    gpio_value_smob = scm_new_gpio_value_smob(HIGH);
+  gpio_value_smob = scm_new_gpio_value_smob(LOW);
+
+  //gpio_value_smob = scm_spawn_thread(detecting, gpio, 0, catch_handler, 0);
+
+  current_scm_callback = gpio->scm_gpio_callbacks;
+  while (current_scm_callback->next != NULL)
+    {
+      return_value = scm_call_1(current_scm_callback->procedure, gpio_value_smob);
+      current_scm_callback = current_scm_callback->next;
+    }
+  return return_value;
 }
 
 SCM
 close_channel(SCM gpio_smob)
 {
   Gpio *gpio;
-  unsigned int current_value;
   int result;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA (gpio_smob);
   result = gpio->close(gpio);
-  if (result =! -1)
+  if (result == -1)
     return scm_gpio_throw("unable to write /sys/class/gpio/*/unexport");
   return gpio_smob;
 }
@@ -216,6 +275,7 @@ scm_init_beagleio_gpio(void)
   scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
   scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);
   scm_c_define_gsubr("gpio-callback-append", 2, 0, 0, append_callback);
+  scm_c_define_gsubr("gpio-event-wait", 2, 0, 0, detect_event);
 
   initialized = 1;
 }
