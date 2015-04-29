@@ -23,7 +23,7 @@
       (gpio-callback-append gpio callback_two))
     (lambda ()
       (display "listening up\n")
-      (gpio-event-wait gpio))
+      (gpio-edge-wait gpio))
     (lambda ()
       (display "closeing\n")
       (gpio-close gpio))))
