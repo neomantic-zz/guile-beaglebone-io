@@ -6,6 +6,8 @@
  (beagleio))
 
 (define (callback_one value)
+  (display value)
+  (newline)
   (display "First callback!!!\n"))
 
 (define (callback_two value)
@@ -16,7 +18,7 @@
     (lambda ()
       (display "setting up\n")
       (gpio-direction-set! gpio INPUT)
-      (gpio-edge-set! gpio RISING)
+      (gpio-edge-set! gpio FALLING)
       (gpio-callback-append gpio callback_one)
       (gpio-callback-append gpio callback_two))
     (lambda ()
