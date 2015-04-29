@@ -172,13 +172,15 @@ append_callback(SCM gpio_smob, SCM procedure)
   return gpio_smob;
 }
 
+//value = scm_spawn_thread(detecting, gpio, catch_handler, 0);
 static SCM
 detecting(void *data)
 {
   Gpio *gpio;
   unsigned int value;
   gpio = (Gpio*)data;
-  detect_edge((unsigned int) gpio->pin_number, &value);
+  detect_edge((unsigned int) gpio->pin_number);
+  gpio->getValue(gpio, &value);
   if (value == HIGH)
     return scm_new_gpio_value_smob(HIGH);
   return scm_new_gpio_value_smob(LOW);
@@ -206,23 +208,25 @@ detect_event(SCM gpio_smob)
       current_direction != INPUT)
     return scm_gpio_throw("The direction was not set to input");
 
-  if ((gpio->getEdge(gpio, &edge) == 0) &&
-      (edge != RISING || edge != FALLING || edge != BOTH))
-    return scm_gpio_throw("No edge was set");
+  if (gpio->getEdge(gpio, &edge) != 0)
+    return scm_gpio_throw("Unable to get the edge!");
+
+  if ((edge != RISING) && (edge != FALLING) && (edge != BOTH))
+    return scm_gpio_throw("No edge was set!");
 
   if (gpio->scm_gpio_callbacks == NULL)
     return scm_gpio_throw("No callbacks have been registered");
 
-  detect_edge((unsigned int) gpio->pin_number, &value);
+  detect_edge((unsigned int) gpio->pin_number);
+
+  gpio->getValue(gpio, &value);
 
   if (value == HIGH)
     gpio_value_smob = scm_new_gpio_value_smob(HIGH);
   gpio_value_smob = scm_new_gpio_value_smob(LOW);
 
-  //gpio_value_smob = scm_spawn_thread(detecting, gpio, 0, catch_handler, 0);
-
   current_scm_callback = gpio->scm_gpio_callbacks;
-  while (current_scm_callback->next != NULL)
+  while (current_scm_callback != NULL)
     {
       return_value = scm_call_1(current_scm_callback->procedure, gpio_value_smob);
       current_scm_callback = current_scm_callback->next;

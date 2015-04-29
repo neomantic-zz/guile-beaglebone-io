@@ -460,22 +460,19 @@ int gpio_event_remove(unsigned int gpio)
     return 0;
 }
 
-int detect_edge(unsigned int gpio, unsigned int *value)
+int detect_edge(unsigned int gpio)
 {
   int fd;
-  char filename[40];
+  char buf, filename[40];
   struct epoll_event ev;
-  char *buf;
   int epfd, n, i;
+
+  if ((epfd = epoll_create(1)) == -1)
+    return 1;
 
   snprintf(filename, sizeof(filename), "/sys/class/gpio/gpio%d/value", gpio);
   if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) < 0)
     return -1;
-
-  // create epfd if not already open
-  /* FIXME:  epfd is global*/
-  if ((epfd == -1) && ((epfd = epoll_create(1)) == -1))
-    return 2;
 
   // add to epoll fd
   ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
@@ -493,7 +490,7 @@ int detect_edge(unsigned int gpio, unsigned int *value)
   if (n > 0)
     {
       lseek(ev.data.fd, 0, SEEK_SET);
-      if (read(ev.data.fd, buf, sizeof(char)) != 1)
+      if (read(ev.data.fd, &buf, sizeof(char)) != 1)
         {
 	  return 6;
         }
@@ -504,10 +501,7 @@ int detect_edge(unsigned int gpio, unsigned int *value)
     }
 
   close(epfd);
-
-  if (strcmp(buf, "0") == 0)
-    return LOW;
-  return HIGH;
+  return 0;
 }
 
 int add_edge_detect(unsigned int gpio, unsigned int edge)
