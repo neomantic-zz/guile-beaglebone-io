@@ -179,8 +179,7 @@ detecting(void *data)
   Gpio *gpio;
   unsigned int value;
   gpio = (Gpio*)data;
-  detect_edge((unsigned int) gpio->pin_number);
-  gpio->getValue(gpio, &value);
+  blocking_wait_for_edge((unsigned int) gpio->pin_number, &value);
   if (value == HIGH)
     return scm_new_gpio_value_smob(HIGH);
   return scm_new_gpio_value_smob(LOW);
@@ -198,8 +197,8 @@ detect_event(SCM gpio_smob)
   Gpio *gpio;
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
-  unsigned int current_direction;
-  unsigned int edge, value;
+  int success;
+  unsigned int edge, value, current_direction;
   SCM gpio_value_smob;
   struct scm_callback *current_scm_callback;
   SCM return_value = SCM_BOOL_F;
@@ -217,9 +216,13 @@ detect_event(SCM gpio_smob)
   if (gpio->scm_gpio_callbacks == NULL)
     return scm_gpio_throw("No callbacks have been registered");
 
-  detect_edge((unsigned int) gpio->pin_number);
-
-  gpio->getValue(gpio, &value);
+  success = blocking_wait_for_edge((unsigned int) gpio->pin_number, &value);
+  if (success < 0) {
+    return scm_gpio_throw("Unable to read value");
+  }
+  else if (success > 0) {
+    return scm_gpio_throw("An error occurred when waiting for an event");
+  }
 
   if (value == HIGH)
     gpio_value_smob = scm_new_gpio_value_smob(HIGH);

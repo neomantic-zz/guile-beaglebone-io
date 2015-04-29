@@ -460,7 +460,7 @@ int gpio_event_remove(unsigned int gpio)
     return 0;
 }
 
-int detect_edge(unsigned int gpio)
+int blocking_wait_for_edge(unsigned int gpio, unsigned int *value)
 {
   int fd;
   char buf, filename[40];
@@ -499,6 +499,12 @@ int detect_edge(unsigned int gpio)
 	  return 7;
         }
     }
+
+  if (buf != '0') {
+    *value = LOW;
+  } else {
+    *value = HIGH;
+  }
 
   close(epfd);
   return 0;
@@ -573,67 +579,4 @@ void event_cleanup(void)
 {
     close(epfd);
     thread_running = 0;
-}
-
-int blocking_wait_for_edge(unsigned int gpio, unsigned int edge)
-// standalone from all the event functions above
-{
-    int fd = fd_lookup(gpio);
-    int epfd, n, i;
-    struct epoll_event events, ev;
-    char buf;
-
-    if ((epfd = epoll_create(1)) == -1)
-        return 1;
-
-    // check to see if this gpio has been added already, if not, mark as added
-    if (gpio_event_add(gpio) != 0)
-        return 2;
-
-    // export /sys/class/gpio interface
-    gpio_export(gpio);
-    gpio_set_direction(gpio, 0); // 0=input
-    gpio_set_edge(gpio, edge);
-
-    if (!fd)
-    {
-        if ((fd = open_value_file(gpio)) == -1)
-            return 3;
-    }
-
-    // add to epoll fd
-    ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
-    ev.data.fd = fd;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
-    {
-        gpio_event_remove(gpio);
-        return 4;
-    }
-
-    // epoll for event
-    for (i = 0; i<2; i++) // first time triggers with current state, so ignore
-       if ((n = epoll_wait(epfd, &events, 1, -1)) == -1)
-       {
-           gpio_event_remove(gpio);
-           return 5;
-       }
-
-    if (n > 0)
-    {
-        lseek(events.data.fd, 0, SEEK_SET);
-        if (read(events.data.fd, &buf, sizeof(buf)) != 1)
-        {
-            gpio_event_remove(gpio);
-            return 6;
-        }
-        if (events.data.fd != fd)
-        {
-            gpio_event_remove(gpio);
-            return 7;
-        }
-    }
-
-    gpio_event_remove(gpio);
-    close(epfd);
-    return 0;
 }
