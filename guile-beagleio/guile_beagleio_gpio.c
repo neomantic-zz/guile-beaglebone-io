@@ -275,7 +275,7 @@ scm_init_beagleio_gpio(void)
   scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
   scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);
   scm_c_define_gsubr("gpio-callback-append", 2, 0, 0, append_callback);
-  scm_c_define_gsubr("gpio-event-wait", 2, 0, 0, detect_event);
+  scm_c_define_gsubr("gpio-event-wait", 1, 0, 0, detect_event);
 
   initialized = 1;
 }
