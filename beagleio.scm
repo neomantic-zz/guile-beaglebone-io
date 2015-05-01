@@ -18,7 +18,8 @@
             RISING
             FALLING
             BOTH
-            gpio-edge-wait))
+            gpio-edge-wait
+            gpio-edge-event-thread))
 
 (dynamic-call "scm_init_beagleio_gpio"
 	      (dynamic-link "guile-beagleio/.libs/libguile-beagleio"))

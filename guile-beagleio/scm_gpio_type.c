@@ -36,6 +36,30 @@ getEdge(const void* self, unsigned int *edge)
   return gpio_get_edge((unsigned int) me->pin_number, edge);
 }
 
+SCM
+edgeDetectable(const void* self)
+{
+  Gpio *me;
+  unsigned int edge, current_direction;
+
+  me = (Gpio*) self;
+
+  if (me->getDirection(me, &current_direction) == 0 &&
+      current_direction != INPUT)
+    return scm_gpio_throw("The direction was not set to input");
+
+  if (me->getEdge(me, &edge) != 0)
+    return scm_gpio_throw("Unable to get the edge!");
+
+  if ((edge != RISING) && (edge != FALLING) && (edge != BOTH))
+    return scm_gpio_throw("No edge was set!");
+
+  if (me->scm_gpio_callbacks == NULL)
+    return scm_gpio_throw("No callbacks have been registered");
+
+  return SCM_BOOL_T;
+}
+
 void
 clearEventCallbacks(const void* self)
 {
@@ -48,7 +72,9 @@ clearEventCallbacks(const void* self)
     next_scm_callback = current_scm_callback->next;
     free(current_scm_callback);
   }
-  me->scm_gpio_callbacks == NULL;
+  me->scm_gpio_callbacks = NULL;
+
+  return;
 }
 
 int
@@ -248,6 +274,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->close = &unexport;
   gpio->scm_gpio_callbacks = NULL;
   gpio->clearEventCallbacks = &clearEventCallbacks;
+  gpio->edgeDetectable = &edgeDetectable;
   return smob;
 }
 

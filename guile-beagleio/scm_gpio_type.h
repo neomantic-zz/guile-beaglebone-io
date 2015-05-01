@@ -23,6 +23,7 @@ typedef struct gpio {
   int (*appendEventCallback)(const void* self, SCM procedure);
   void (*clearEventCallbacks)(const void* self);
   int (*close)(const void* self);
+  SCM (*edgeDetectable)(const void* self);
   SCM channel;
   SCM update_func;
   struct scm_callback *scm_gpio_callbacks;
