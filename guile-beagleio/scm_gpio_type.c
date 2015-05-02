@@ -48,7 +48,8 @@ clearEventCallbacks(const void* self)
     next_scm_callback = current_scm_callback->next;
     free(current_scm_callback);
   }
-  me->scm_gpio_callbacks == NULL;
+  me->scm_gpio_callbacks = NULL;
+  return;
 }
 
 int
