@@ -236,6 +236,7 @@ detecting(void *data)
       current_scm_callback = current_scm_callback->next;
     }
   }
+
   return return_value;
 }
 
@@ -245,17 +246,8 @@ catch_handler(void *data, SCM key, SCM args)
   return SCM_BOOL_T;
 }
 
-static void *
-spawn_edge_thread(void *data) {
-  SCM thread;
-  printf("CHAD wtf2\n");
-  thread = scm_spawn_thread(detecting, (Gpio *)data, catch_handler, 0);
-  printf("CHAD wtf3\n");
-  return SCM2PTR(scm_join_thread(thread));
-}
-
 SCM
-listen_for_edge_one(SCM gpio_smob) {
+listen_for_edge(SCM gpio_smob) {
   Gpio *gpio;
   SCM detectable, returned;
   scm_assert_gpio_smob_type(&gpio_smob);
@@ -263,12 +255,14 @@ listen_for_edge_one(SCM gpio_smob) {
   printf("CHAD wtf1\n");
 
   detectable = gpio->edgeDetectable(gpio);
-  if (detectable != SCM_BOOL_T)
+  if (!scm_is_true(detectable));
     return detectable;
-  returned = PTR2SCM(scm_with_guile(spawn_edge_thread, gpio));
 
-  printf("CHAD wtf\n");
-  return returned;
+  SCM thread;
+  printf("CHAD wtf2\n");
+  thread = scm_spawn_thread(detecting, gpio, catch_handler, 0);
+  printf("CHAD wtf9\n");
+  return scm_join_thread(thread);
 }
 
 SCM
@@ -321,39 +315,6 @@ close_channel(SCM gpio_smob)
   if (result == -1)
     return scm_gpio_throw("unable to write /sys/class/gpio/*/unexport");
   return gpio_smob;
-}
-
-
-
-static SCM
-thread_main (void *data)
-{
-  return SCM_BOOL_T;
-}
-
-static SCM
-thread_handler (void *data, SCM key, SCM args)
-{
-  return SCM_BOOL_T;
-}
-
-static void *
-inner_main (void *data)
-{
-  SCM thread, timeout;
-  printf("what");
-  thread = scm_spawn_thread (thread_main, 0, thread_handler, 0);
-  timeout = scm_from_unsigned_integer (time (NULL) + 10);
-  printf("what2");
-  return SCM2PTR (scm_join_thread_timed (thread, timeout, SCM_BOOL_F));
-}
-
-static SCM
-listen_for_edge(SCM gpio_smob)
-{
-  SCM result;
-  result = PTR2SCM (scm_with_guile (inner_main, 0));
-  return result;
 }
 
 void
