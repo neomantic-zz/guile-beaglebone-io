@@ -8,8 +8,6 @@
 #include "scm_gpio_value_type.h"
 #include "scm_gpio_direction_type.h"
 #include "scm_gpio_edge_type.h"
-#include <sys/epoll.h>
-#include <fcntl.h>
 
 SCM
 scm_gpio_throw(char *message)
@@ -177,52 +175,21 @@ append_callback(SCM gpio_smob, SCM procedure)
 static SCM
 detecting(void *data)
 {
+  struct detection_args *args;
   Gpio *gpio;
-  struct epoll_event event;
-  char buf, filename[40];
-  int n, i, epfd, fd;
   struct scm_callback *current_scm_callback;
   struct timeval tv_timenow;
   unsigned long long timenow;
   SCM gpio_value_smob, return_value;
-  int woot = 0;
+  struct thread_poller *event_poller;
+  event_poller = (struct thread_poller*) detection_args.poller;
 
-  gpio = (Gpio*)data;
-  return_value = SCM_BOOL_F;
-  gpio_value_smob = scm_new_gpio_value_smob(LOW);
-
-  if ((epfd = epoll_create(1)) == -1)
-    return scm_gpio_throw("what 1");
-
-  snprintf(filename, sizeof(filename), "/sys/class/gpio/gpio%d/value", gpio->pin_number);
-  if ((fd = open(filename, O_RDONLY | O_NONBLOCK)) < 0)
-    return scm_gpio_throw("Unable to read value file");
-
-  // add to epoll fd
-  event.events = EPOLLIN | EPOLLET | EPOLLPRI;
-  event.data.fd = fd;
-  if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) == -1)
-    return scm_gpio_throw("Unable to detect");
-
-  // epoll for event
-  for (i = 0; i<2; i++) // first time triggers with current state, so ignore
-    if ((n = epoll_wait(epfd, &event, 1, -1)) == -1) {
-      woot = 0;
-      /* TODO:  raise?*/
-      //return SCM_BOOL_F;
-    }
-
-  if (n > 0) {
-    lseek(event.data.fd, 0, SEEK_SET);
-    if (read(event.data.fd, &buf, sizeof(char)) != 1) {
-  	/* TODO:  raise?*/
-      woot = 0;
-      //return SCM_BOOL_F;
-    }
-
+  if (event_poller((int *)poller.fd_arg, (int *) poller.epfd_arg) == 0) {
+    gpio = (Gpio *) detection_args.gpio;
     current_scm_callback = gpio->scm_gpio_callbacks;
+
     while (current_scm_callback != NULL) {
-      gettimeofday(&tv_timenow, NULL);
+      gettimeofday(&tv_timenow, NULL)_;
       timenow = tv_timenow.tv_sec*1E6 + tv_timenow.tv_usec;
       if (current_scm_callback->bouncetime == 0 ||
     	  timenow - current_scm_callback->lastcall > current_scm_callback->bouncetime*1000 ||
@@ -236,7 +203,8 @@ detecting(void *data)
       current_scm_callback = current_scm_callback->next;
     }
   }
-
+  free(detection_args);
+  free(poller);
   return return_value;
 }
 
@@ -246,7 +214,22 @@ catch_handler(void *data, SCM key, SCM args)
   return SCM_BOOL_T;
 }
 
-SCM
+int
+spawn_thread(struct thread_poller *poller) {
+  SCM thread;
+  printf("CHAD wtf2\n");
+  struct detection_args*;
+  detection_args = malloc(sizeof(detection_args));
+  if (detection_args == NULL)
+    return -1;
+  detection_args.gpio = gpio;
+  detection_args.poller = poller;
+  thread = scm_spawn_thread(detecting, detection_args, catch_handler, 0);
+  printf("CHAD wtf9\n");
+  return scm_join_thread(thread);
+}
+
+void
 listen_for_edge(SCM gpio_smob) {
   Gpio *gpio;
   SCM detectable, returned;
@@ -255,14 +238,12 @@ listen_for_edge(SCM gpio_smob) {
   printf("CHAD wtf1\n");
 
   detectable = gpio->edgeDetectable(gpio);
-  if (!scm_is_true(detectable));
+  if (!scm_is_true(detectable))
     return detectable;
 
-  SCM thread;
-  printf("CHAD wtf2\n");
-  thread = scm_spawn_thread(detecting, gpio, catch_handler, 0);
-  printf("CHAD wtf9\n");
-  return scm_join_thread(thread);
+  add_edge_detect((unsigned int) gpio->pin_number, spawn_thread);
+
+  return;
 }
 
 SCM

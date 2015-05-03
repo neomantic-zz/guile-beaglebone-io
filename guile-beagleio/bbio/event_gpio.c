@@ -380,39 +380,31 @@ int gpio_initial(unsigned int gpio)
     return 0;
 }
 
-void *poll_thread(void *threadarg)
+typedef int (*thread_poller) (int *fd, int *epfd);
+
+int *poll_thread(int *fd, int *epfd)
 {
     struct epoll_event events;
     char buf;
-    unsigned int gpio;
-    int n;
+    int n, i;
 
-    thread_running = 1;
-    while (thread_running)
-    {
-        if ((n = epoll_wait(epfd, &events, 1, -1)) == -1)
-        {
-            thread_running = 0;
-            pthread_exit(NULL);
-        }
-        if (n > 0) {
-            lseek(events.data.fd, 0, SEEK_SET);
-            if (read(events.data.fd, &buf, 1) != 1)
-            {
-                thread_running = 0;
-                pthread_exit(NULL);
-            }
-            gpio = gpio_lookup(events.data.fd);
-            if (gpio_initial(gpio)) {     // ignore first epoll trigger
-                set_initial_false(gpio);
-            } else {
-                event_occurred[gpio] = 1;
-                run_callbacks(gpio);
-            }
-        }
+    // epoll for event
+    for (i = 0; i<2; i++) // first time triggers with current state, so ignore
+      if ((n = epoll_wait(*epfd, &events, 1, -1)) == -1)
+	{
+	  return -1;
+	}
+
+    if (n > 0) {
+      lseek(events.data.fd, 0, SEEK_SET);
+      if (read(events.data.fd, &buf, sizeof(char)) != 1)
+	  return -2;
+      if (events.data.fd != *fd)
+	return -3;
     }
-    thread_running = 0;
-    pthread_exit(NULL);
+
+    close(*epfd);
+    return 0;
 }
 
 int gpio_is_evented(unsigned int gpio)
@@ -510,38 +502,42 @@ int blocking_wait_for_edge(unsigned int gpio, unsigned int *value)
   return 0;
 }
 
-int add_edge_detect(unsigned int gpio, unsigned int edge)
+typedef int (*thread_with_callbacks) (thread_poller poller);
+typedef thread_poller struct {
+  int *fd_arg;
+  int *epfd_arg;
+  thread_with_callbacks runner;
+};
+int add_edge_detect(unsigned int gpio, thread_with_callbacks runner)
 // return values:
 // 0 - Success
 // 1 - Edge detection already added
 // 2 - Other error
 {
-    int fd;
-    pthread_t threads;
-    struct epoll_event ev;
-    long t = 0;
+  int fd, epfd;
+  struct epoll_event ev;
 
-    if ((fd = open_value_file(gpio)) == -1)
-      return 2;
+  if ((fd = open_value_file(gpio)) == -1)
+    return 2;
 
-    // create epfd if not already open
-    if ((epfd == -1) && ((epfd = epoll_create(1)) == -1))
-        return 2;
+  // create epfd if not already open
+  if ((epfd = epoll_create(1)) == -1)
+    return 2;
 
-    // add to epoll fd
-    ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
-    ev.data.fd = fd;
-    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
-        return 2;
+  // add to epoll fd
+  ev.events = EPOLLIN | EPOLLET | EPOLLPRI;
+  ev.data.fd = fd;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    return 2;
+  thread_poller *poller = malloc(sizeof(thread_poller));
+  if (poller == NULL)
+    return -1;
 
-    // start poll thread if it is not already running
-    if (!thread_running)
-    {
-      if (pthread_create(&threads, NULL, poll_thread, (void *)t) != 0)
-	return 2;
-    }
-
-    return 0;
+  poller.runner = runner;
+  poller.fd_arg = &fd;
+  poller.epfd_arg = &epfd;
+  runner(thread_poller);
+  return 0;
 }
 
 void remove_edge_detect(unsigned int gpio)
