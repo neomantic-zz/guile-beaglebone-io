@@ -189,7 +189,7 @@ detecting(void *data)
     current_scm_callback = gpio->scm_gpio_callbacks;
 
     while (current_scm_callback != NULL) {
-      gettimeofday(&tv_timenow, NULL)_;
+      gettimeofday(&tv_timenow, NULL);
       timenow = tv_timenow.tv_sec*1E6 + tv_timenow.tv_usec;
       if (current_scm_callback->bouncetime == 0 ||
     	  timenow - current_scm_callback->lastcall > current_scm_callback->bouncetime*1000 ||
