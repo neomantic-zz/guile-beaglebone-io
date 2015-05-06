@@ -182,9 +182,9 @@ detecting(void *data)
   unsigned long long timenow;
   SCM gpio_value_smob, return_value;
   struct thread_poller *event_poller;
-  event_poller = (struct thread_poller*) detection_args.poller;
+  event_poller = (struct thread_poller*) detection_args->poller;
 
-  if (event_poller((int *)poller.fd_arg, (int *) poller.epfd_arg) == 0) {
+  if (event_poller((int *)event_poller->fd_arg, (int *) event_poller->epfd_arg) == 0) {
     gpio = (Gpio *) detection_args.gpio;
     current_scm_callback = gpio->scm_gpio_callbacks;
 
@@ -204,7 +204,7 @@ detecting(void *data)
     }
   }
   free(detection_args);
-  free(poller);
+  free(event_poller);
   return return_value;
 }
 
