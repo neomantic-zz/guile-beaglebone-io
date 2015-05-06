@@ -273,7 +273,7 @@ wait_for_edge(SCM gpio_smob)
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
 
   detectable = gpio->edgeDetectable(gpio);
-  if (detectable != SCM_BOOL_T)
+  if (scm_is_false(detectable))
     return detectable;
 
   gpio_value_smob = scm_new_gpio_value_smob(LOW);
