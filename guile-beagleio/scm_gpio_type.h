@@ -26,6 +26,7 @@ typedef struct gpio {
   SCM (*edgeDetectable)(const void* self);
   SCM channel;
   SCM update_func;
+  scm_i_pthread_mutex_t callbacks_mutex;
   struct scm_callback *scm_gpio_callbacks;
 } Gpio;
 

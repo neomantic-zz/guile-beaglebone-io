@@ -64,15 +64,20 @@ void
 clearEventCallbacks(const void* self)
 {
   Gpio *me = (Gpio*) self;
-  struct scm_callback *next_scm_callback;
-  struct scm_callback *current_scm_callback = (struct scm_callback *) me->scm_gpio_callbacks;
-  next_scm_callback = current_scm_callback;
+  struct scm_callback *next_scm_callback, *current_scm_callback;
+  scm_i_pthread_mutex_t callbacks_mutex;
 
+  current_scm_callback = (struct scm_callback *) me->scm_gpio_callbacks;
+  next_scm_callback = current_scm_callback;
+  callbacks_mutex = (scm_i_pthread_mutex_t) me->callbacks_mutex;
+
+  scm_i_pthread_mutex_lock(&callbacks_mutex);
   while (next_scm_callback != NULL) {
     next_scm_callback = current_scm_callback->next;
     free(current_scm_callback);
   }
   me->scm_gpio_callbacks = NULL;
+  scm_i_pthread_mutex_unlock(&callbacks_mutex);
 
   return;
 }
@@ -81,10 +86,9 @@ int
 appendEventCallback(const void* self, SCM procedure)
 {
   Gpio *me;
-  struct scm_callback *new_scm_callback;
-  struct scm_callback *current_scm_callback;
-  unsigned int current_direction;
-  unsigned int current_edge;
+  struct scm_callback *new_scm_callback, *current_scm_callback;
+  unsigned int current_direction, current_edge;
+  scm_i_pthread_mutex_t callbacks_mutex;
 
   new_scm_callback = malloc(sizeof(struct scm_callback));
 
@@ -112,6 +116,8 @@ appendEventCallback(const void* self, SCM procedure)
   new_scm_callback->next = NULL;
   new_scm_callback->bouncetime = 0;
 
+  callbacks_mutex = (scm_i_pthread_mutex_t) me->callbacks_mutex;
+  scm_i_pthread_mutex_lock(&callbacks_mutex);
   if (me->scm_gpio_callbacks == NULL) {
     me->scm_gpio_callbacks = new_scm_callback;
   } else {
@@ -120,6 +126,7 @@ appendEventCallback(const void* self, SCM procedure)
       current_scm_callback = current_scm_callback->next;
     current_scm_callback->next = new_scm_callback;
   }
+  scm_i_pthread_mutex_unlock(&callbacks_mutex);
 
   return 0;
 }
@@ -259,6 +266,8 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
 {
   SCM smob;
   Gpio *gpio;
+  scm_i_pthread_mutex_t callbacks_mutex = SCM_I_PTHREAD_MUTEX_INITIALIZER;
+
   gpio = (Gpio *) scm_gc_malloc(sizeof(Gpio), "gpio");
   gpio->pin_number = *gpio_number;
   gpio->channel = SCM_BOOL_F;
@@ -274,6 +283,7 @@ scm_new_gpio_smob(unsigned int *gpio_number, SCM *s_channel)
   gpio->appendEventCallback = &appendEventCallback;
   gpio->close = &unexport;
   gpio->scm_gpio_callbacks = NULL;
+  gpio->callbacks_mutex = callbacks_mutex;
   gpio->clearEventCallbacks = &clearEventCallbacks;
   gpio->edgeDetectable = &edgeDetectable;
   return smob;
