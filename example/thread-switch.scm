@@ -8,13 +8,13 @@
 
 (define switch-count 0)
 
-(define (callback_one value)
-  (display value)
+(define (callback_one gpio)
+  (display gpio)
   (newline)
   (display "********* Callback 1\n"))
 
-(define (callback_two value)
-  (display value)
+(define (callback_two gpio)
+  (display gpio)
   (newline)
   (display "********* Callback 2\n"))
 
