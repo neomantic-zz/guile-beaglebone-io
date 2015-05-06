@@ -40,15 +40,20 @@ void
 clearEventCallbacks(const void* self)
 {
   Gpio *me = (Gpio*) self;
-  struct scm_callback *next_scm_callback;
-  struct scm_callback *current_scm_callback = (struct scm_callback *) me->scm_gpio_callbacks;
-  next_scm_callback = current_scm_callback;
+  struct scm_callback *next_scm_callback, *current_scm_callback;
+  scm_i_pthread_mutex_t callbacks_mutex;
 
+  current_scm_callback = (struct scm_callback *) me->scm_gpio_callbacks;
+  next_scm_callback = current_scm_callback;
+  callbacks_mutex = (scm_i_pthread_mutex_t) me->callbacks_mutex;
+
+  scm_i_pthread_mutex_lock(&callbacks_mutex);
   while (next_scm_callback != NULL) {
     next_scm_callback = current_scm_callback->next;
     free(current_scm_callback);
   }
   me->scm_gpio_callbacks = NULL;
+  scm_i_pthread_mutex_unlock(&callbacks_mutex);
   return;
 }
 
