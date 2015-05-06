@@ -5,12 +5,14 @@
 (use-modules
  (beagleio))
 
-(define (callback_one value)
+(define (callback_one gpio value)
+  (display gpio)
+  (newline)
   (display value)
   (newline)
   (display "First callback!!!\n"))
 
-(define (callback_two value)
+(define (callback_two gpio value)
   (display "Second callback!!!\n"))
 
 (let ((gpio (gpio-setup "P8_12")))
@@ -19,11 +21,11 @@
       (display "setting up\n")
       (gpio-direction-set! gpio INPUT)
       (gpio-edge-set! gpio FALLING)
-      (gpio-callback-append gpio callback_one)
-      (gpio-callback-append gpio callback_two))
+      (gpio-edge-callback-register gpio callback_one)
+      (gpio-edge-callback-register gpio callback_two))
     (lambda ()
       (display "listening up\n")
       (gpio-edge-wait gpio))
     (lambda ()
-      (display "closeing\n")
+      (display "closing\n")
       (gpio-close gpio))))

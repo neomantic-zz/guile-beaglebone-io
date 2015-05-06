@@ -267,7 +267,7 @@ wait_for_edge(SCM gpio_smob)
   int success;
   unsigned int value;
   struct scm_callback *current_scm_callback;
-  SCM detectable, gpio_value_smob, return_value;
+  SCM detectable, gpio_value_smob;
 
   scm_assert_gpio_smob_type(&gpio_smob);
   gpio = (Gpio *) SCM_SMOB_DATA(gpio_smob);
@@ -277,7 +277,6 @@ wait_for_edge(SCM gpio_smob)
     return detectable;
 
   gpio_value_smob = scm_new_gpio_value_smob(LOW);
-  return_value = SCM_BOOL_F;
 
   success = blocking_wait_for_edge((unsigned int) gpio->pin_number, &value);
   if (success < 0) {
@@ -293,10 +292,10 @@ wait_for_edge(SCM gpio_smob)
   current_scm_callback = gpio->scm_gpio_callbacks;
   while (current_scm_callback != NULL)
     {
-      return_value = scm_call_1(current_scm_callback->procedure, gpio_value_smob);
+      scm_call_2(current_scm_callback->procedure, gpio_smob, gpio_value_smob);
       current_scm_callback = current_scm_callback->next;
     }
-  return return_value;
+  return gpio_value_smob;
 }
 
 SCM
@@ -343,7 +342,7 @@ scm_init_beagleio_gpio(void)
   scm_c_define("FALLING", scm_new_gpio_edge_smob(FALLING));
   scm_c_define("BOTH", scm_new_gpio_edge_smob(BOTH));
   scm_c_define_gsubr("gpio-edge-set!", 2, 0, 0, set_edge);
-  scm_c_define_gsubr("gpio-callback-append", 2, 0, 0, append_callback);
+  scm_c_define_gsubr("gpio-edge-callback-register", 2, 0, 0, append_callback);
   scm_c_define_gsubr("gpio-edge-wait", 1, 0, 0, wait_for_edge);
   scm_c_define_gsubr("gpio-edge-make-thread", 1, 0, 0, make_edge_thread);
 

@@ -12,7 +12,7 @@
 	    OUTPUT
 	    HIGH
 	    LOW
-            gpio-callback-append
+            gpio-edge-callback-register
             gpio-edge-set!
             NONE
             RISING
