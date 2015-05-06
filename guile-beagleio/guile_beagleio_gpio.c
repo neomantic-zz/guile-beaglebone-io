@@ -230,7 +230,7 @@ wait_for_edge(SCM gpio_smob)
   current_scm_callback = gpio->scm_gpio_callbacks;
   while (current_scm_callback != NULL)
     {
-      return_value = scm_call_2(current_scm_callback->procedure, gpio_smob, gpio_value_smob);
+      scm_call_2(current_scm_callback->procedure, gpio_smob, gpio_value_smob);
       current_scm_callback = current_scm_callback->next;
     }
   return gpio_value_smob;
