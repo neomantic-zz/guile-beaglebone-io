@@ -110,6 +110,7 @@ appendEventCallback(const void* self, SCM procedure)
   new_scm_callback->procedure = procedure;
   new_scm_callback->lastcall = 0;
   new_scm_callback->next = NULL;
+  new_scm_callback->bouncetime = 0;
 
   if (me->scm_gpio_callbacks == NULL) {
     me->scm_gpio_callbacks = new_scm_callback;
