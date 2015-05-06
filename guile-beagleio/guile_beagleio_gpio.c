@@ -201,7 +201,6 @@ wait_for_edge(SCM gpio_smob)
   unsigned int edge, value, current_direction;
   SCM gpio_value_smob;
   struct scm_callback *current_scm_callback;
-  SCM return_value = SCM_BOOL_F;
 
   if (gpio->getDirection(gpio, &current_direction) == 0 &&
       current_direction != INPUT)
@@ -231,10 +230,10 @@ wait_for_edge(SCM gpio_smob)
   current_scm_callback = gpio->scm_gpio_callbacks;
   while (current_scm_callback != NULL)
     {
-      return_value = scm_call_1(current_scm_callback->procedure, gpio_value_smob);
+      return_value = scm_call_2(current_scm_callback->procedure, gpio_smob, gpio_value_smob);
       current_scm_callback = current_scm_callback->next;
     }
-  return return_value;
+  return gpio_value_smob;
 }
 
 SCM
