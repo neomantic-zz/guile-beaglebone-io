@@ -58,14 +58,6 @@ struct callback
 };
 struct callback *callbacks = NULL;
 
-// gpio exports
-struct gpio_exp
-{
-    unsigned int gpio;
-    struct gpio_exp *next;
-};
-struct gpio_exp *exported_gpios = NULL;
-
 pthread_t threads;
 int thread_running = 0;
 
