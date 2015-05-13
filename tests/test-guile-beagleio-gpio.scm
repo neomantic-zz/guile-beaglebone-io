@@ -432,49 +432,49 @@
    (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio INPUT)
-             (gpio-callback-append gpio (lambda (value) #t)))))
+             (gpio-edge-callback-register gpio (lambda (value) #t)))))
   (test-error
    "raises an error when the append an callback and direction is OUTPUT"
    (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio OUTPUT)
-             (gpio-callback-append gpio (lambda (value) #t)))))
+             (gpio-edge-callback-register gpio (lambda (value) #t)))))
   (test-error
    "raises an error when appending a callback but the edge was set to none "
    (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio OUTPUT)
              (gpio-edge-set! gpio NONE)
-             (gpio-callback-append gpio (lambda (value) #t)))))
+             (gpio-edge-callback-register gpio (lambda (value) #t)))))
   (test-assert
    "returns the gpio on successful append when edge set to FALLING"
    (gpio? (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio INPUT)
              (gpio-edge-set! gpio BOTH)
-             (gpio-callback-append gpio (lambda (value) #t))))))
+             (gpio-edge-callback-register gpio (lambda (value) #t))))))
   (test-assert
    "returns the gpio on successful append when edge set to RISING"
    (gpio? (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio INPUT)
              (gpio-edge-set! gpio BOTH)
-             (gpio-callback-append gpio (lambda (value) #t))))))
+             (gpio-edge-callback-register gpio (lambda (value) #t))))))
   (test-assert
    "returns the gpio on successful append when edge set to BOTH"
    (gpio? (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio INPUT)
              (gpio-edge-set! gpio BOTH)
-             (gpio-callback-append gpio (lambda (value) #t))))))
+             (gpio-edge-callback-register gpio (lambda (value) #t))))))
   (test-assert
    "returns the gpio when multiple callbacks have been appended"
    (call-with-gpio
     "P8_3" (lambda (gpio)
              (gpio-direction-set! gpio INPUT)
              (gpio-edge-set! gpio BOTH)
-             (gpio-callback-append
-              (gpio-callback-append gpio (lambda (value) #t))
+             (gpio-edge-callback-register
+              (gpio-edge-callback-register gpio (lambda (value) #t))
               (lambda (value) #f)))))))
 
 (test-end "gpio")
