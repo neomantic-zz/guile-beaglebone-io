@@ -40,18 +40,6 @@ SOFTWARE.
 
 const char *stredge[4] = {"none", "rising", "falling", "both"};
 
-// file descriptors
-struct fdx
-{
-    int fd;
-    unsigned int gpio;
-    int initial;
-    unsigned int is_evented;
-    struct fdx *next;
-};
-struct fdx *fd_list = NULL;
-
-
 struct poll_thread_arg
 {
   int fd;
@@ -250,19 +238,6 @@ int gpio_get_edge(unsigned int gpio, unsigned int *value)
   return 0;
 }
 
-
-unsigned int gpio_lookup(int fd)
-{
-    struct fdx *f = fd_list;
-    while (f != NULL)
-    {
-        if (f->fd == fd)
-            return f->gpio;
-        f = f->next;
-    }
-    return 0;
-}
-
 int add_edge_callback(unsigned int gpio, void (*func)(unsigned int gpio))
 {
     struct callback *cb = callbacks;
@@ -338,17 +313,20 @@ void *poll_thread(void *threadarg)
         if ((n = epoll_wait((int) poll_thread_arg->epfd, &events, 1, -1)) == -1)
         {
             thread_running = 0;
-            pthread_exit(NULL);
+	    close(poll_thread_arg->epfd);
+	    close(poll_thread_arg->fd);
 	    free(poll_thread_arg);
+            pthread_exit(NULL);
         }
         if (n > 0) {
             lseek(events.data.fd, 0, SEEK_SET);
             if (read(events.data.fd, &buf, 1) != 1)
             {
                 thread_running = 0;
-                pthread_exit(NULL);
+		close(poll_thread_arg->epfd);
+		close(poll_thread_arg->fd);
 		free(poll_thread_arg);
-
+                pthread_exit(NULL);
             }
 
 	    if (events.data.fd == (int) poll_thread_arg->fd) {
@@ -365,38 +343,9 @@ void *poll_thread(void *threadarg)
     }
     thread_running = 0;
     close(poll_thread_arg->epfd);
+    close(poll_thread_arg->fd);
     free(poll_thread_arg);
     pthread_exit(NULL);
-}
-
-int gpio_is_evented(unsigned int gpio)
-{
-    struct fdx *f = fd_list;
-    while (f != NULL)
-    {
-        if (f->gpio == gpio)
-            return 1;
-        f = f->next;
-    }
-    return 0;
-}
-
-int gpio_event_add(unsigned int gpio)
-{
-    struct fdx *f = fd_list;
-    while (f != NULL)
-    {
-        if (f->gpio == gpio)
-        {
-            if (f->is_evented)
-                return 1;
-
-            f->is_evented = 1;
-            return 0;
-        }
-        f = f->next;
-    }
-    return 0;
 }
 
 int blocking_wait_for_edge(unsigned int gpio, unsigned int *value)
