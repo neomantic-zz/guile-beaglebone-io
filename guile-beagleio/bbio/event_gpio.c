@@ -88,32 +88,6 @@ int gpio_export(unsigned int gpio)
     return 0;
 }
 
-void close_value_fd(unsigned int gpio)
-{
-    struct fdx *f = fd_list;
-    struct fdx *temp;
-    struct fdx *prev = NULL;
-
-    while (f != NULL)
-    {
-        if (f->gpio == gpio)
-        {
-            close(f->fd);
-            if (prev == NULL)
-                fd_list = f->next;
-            else
-                prev->next = f->next;
-            temp = f;
-            f = f->next;
-            free(temp);
-        } else {
-            prev = f;
-            f = f->next;
-        }
-    }
-}
-
-
 int open_value_file(unsigned int gpio)
 {
     int fd;
