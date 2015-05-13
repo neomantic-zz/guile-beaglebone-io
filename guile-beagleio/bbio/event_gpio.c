@@ -185,6 +185,8 @@ int gpio_get_value(unsigned int gpio, unsigned int *value)
         *value = 0;
     }
 
+    close(fd);
+
     return 0;
 }
 
