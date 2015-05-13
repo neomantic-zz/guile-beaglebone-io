@@ -113,17 +113,6 @@ void close_value_fd(unsigned int gpio)
     }
 }
 
-int fd_lookup(unsigned int gpio)
-{
-    struct fdx *f = fd_list;
-    while (f != NULL)
-    {
-        if (f->gpio == gpio)
-            return f->fd;
-        f = f->next;
-    }
-    return 0;
-}
 
 int open_value_file(unsigned int gpio)
 {
@@ -219,14 +208,11 @@ int gpio_set_value(unsigned int gpio, unsigned int value)
 
 int gpio_get_value(unsigned int gpio, unsigned int *value)
 {
-    int fd = fd_lookup(gpio);
+    int fd;
     char ch;
 
-    if (!fd)
-    {
-        if ((fd = open_value_file(gpio)) == -1)
-            return -1;
-    }
+    if ((fd = open_value_file(gpio)) == -1)
+      return -1;
 
     lseek(fd, 0, SEEK_SET);
     read(fd, &ch, sizeof(ch));
@@ -547,7 +533,7 @@ int add_edge_detect(unsigned int gpio, unsigned int edge)
 void remove_edge_detect(unsigned int gpio)
 {
     struct epoll_event ev;
-    int fd = fd_lookup(gpio);
+    int fd = open_value_file(gpio);
 
     // delete callbacks for gpio
     remove_callbacks(gpio);
@@ -563,6 +549,8 @@ void remove_edge_detect(unsigned int gpio)
 
     // clear detected flag
     event_occurred[gpio] = 0;
+
+    close(fd);
 }
 
 int event_detected(unsigned int gpio)
